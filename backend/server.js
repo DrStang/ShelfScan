@@ -2,10 +2,49 @@
 const express = require('express');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
+const cheerio = require('cheerio');
+const redis = require('redis');
 require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+// Redis client setup
+let redisClient;
+let isRedisReady = false;
+
+(async () => {
+  try {
+    // Redis connection - works with Upstash Redis or local Redis
+    redisClient = redis.createClient({
+      url: process.env.REDIS_URL || 'redis://localhost:6379',
+      socket: {
+        reconnectStrategy: (retries) => {
+          if (retries > 3) {
+            console.log('❌ Redis: Too many retries, giving up');
+            return new Error('Too many retries');
+          }
+          return retries * 1000;
+        }
+      }
+    });
+
+    redisClient.on('error', (err) => {
+      console.error('❌ Redis Client Error:', err.message);
+      isRedisReady = false;
+    });
+
+    redisClient.on('ready', () => {
+      console.log('✅ Redis: Connected and ready');
+      isRedisReady = true;
+    });
+
+    await redisClient.connect();
+  } catch (err) {
+    console.warn('⚠️  Redis not available, caching disabled:', err.message);
+    isRedisReady = false;
+  }
+})();
 
 // Middleware
 app.use(express.json({ limit: '10mb' }));
@@ -29,13 +68,171 @@ const apiLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// Goodreads scraping rate limiter - 5 requests per minute
+const goodreadsLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 5,
+  skipSuccessfulRequests: false,
+  message: { error: 'Goodreads rate limit reached. Please wait a moment.' }
+});
+
 // Apply rate limiting to scan endpoint
 app.use('/api/scan', apiLimiter);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    redis: isRedisReady ? 'connected' : 'disconnected'
+  });
 });
+
+// Helper function to get from cache
+async function getFromCache(key) {
+  if (!isRedisReady) return null;
+  try {
+    const data = await redisClient.get(key);
+    return data ? JSON.parse(data) : null;
+  } catch (err) {
+    console.error('Redis GET error:', err.message);
+    return null;
+  }
+}
+
+// Helper function to set cache (30 days expiry)
+async function setCache(key, value, expirySeconds = 2592000) {
+  if (!isRedisReady) return;
+  try {
+    await redisClient.setEx(key, expirySeconds, JSON.stringify(value));
+  } catch (err) {
+    console.error('Redis SET error:', err.message);
+  }
+}
+
+// Helper function to scrape Goodreads
+async function scrapeGoodreads(isbn, title, author) {
+  if (!isbn && (!title || !author)) {
+    console.log('Skipping Goodreads: No ISBN or title/author provided');
+    return null;
+  }
+
+  // Check cache first
+  const cacheKey = `goodreads:${isbn || `${title}:${author}`}`;
+  const cached = await getFromCache(cacheKey);
+  if (cached) {
+    console.log(`✅ Goodreads cache hit for: ${title}`);
+    return cached;
+  }
+
+  try {
+    // Build search URL - prefer ISBN, fallback to title+author search
+    let searchUrl;
+    if (isbn) {
+      searchUrl = `https://www.goodreads.com/search?q=${encodeURIComponent(isbn)}`;
+    } else {
+      searchUrl = `https://www.goodreads.com/search?q=${encodeURIComponent(`${title} ${author}`)}`;
+    }
+
+    console.log(`🔍 Scraping Goodreads: ${title}`);
+
+    // Add delay to respect rate limits
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    const response = await fetch(searchUrl, {
+      headers: {
+        'User-Agent': 'BookScannerApp/1.0 (Personal Use; Educational Project)',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
+        'Connection': 'keep-alive',
+      }
+    });
+
+    if (!response.ok) {
+      console.warn(`Goodreads returned ${response.status}`);
+      return null;
+    }
+
+    const html = await response.text();
+    const $ = cheerio.load(html);
+
+    // Try to find the first book result
+    const firstResult = $('.bookTitle').first();
+    if (!firstResult.length) {
+      console.warn('No Goodreads results found');
+      return null;
+    }
+
+    // Get the book page URL
+    const bookPath = firstResult.attr('href');
+    if (!bookPath) return null;
+
+    const bookUrl = `https://www.goodreads.com${bookPath}`;
+
+    // Fetch the actual book page
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    const bookResponse = await fetch(bookUrl, {
+      headers: {
+        'User-Agent': 'BookScannerApp/1.0 (Personal Use; Educational Project)',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
+        'Connection': 'keep-alive',
+      }
+    });
+
+    if (!bookResponse.ok) return null;
+
+    const bookHtml = await bookResponse.text();
+    const $book = cheerio.load(bookHtml);
+
+    // Extract rating from meta tags (more reliable)
+    let rating = 0;
+    let ratingsCount = 0;
+
+    // Try multiple selectors as Goodreads layout changes
+    const ratingMeta = $book('meta[itemprop="ratingValue"]').attr('content') ||
+                       $book('[itemprop="ratingValue"]').text().trim() ||
+                       $book('.RatingStatistics__rating').first().text().trim();
+    
+    const countMeta = $book('meta[itemprop="ratingCount"]').attr('content') ||
+                      $book('[itemprop="ratingCount"]').text().trim() ||
+                      $book('.RatingStatistics__meta').first().text();
+
+    if (ratingMeta) {
+      rating = parseFloat(ratingMeta);
+    }
+
+    if (countMeta) {
+      // Extract number from text like "1,234 ratings"
+      const countMatch = countMeta.replace(/,/g, '').match(/\d+/);
+      if (countMatch) {
+        ratingsCount = parseInt(countMatch[0]);
+      }
+    }
+
+    if (rating > 0) {
+      const result = {
+        rating: rating,
+        ratingsCount: ratingsCount,
+        url: bookUrl,
+        source: 'goodreads'
+      };
+
+      // Cache the result
+      await setCache(cacheKey, result);
+      console.log(`✅ Goodreads found: ${title} - ${rating}⭐ (${ratingsCount} ratings)`);
+      
+      return result;
+    }
+
+    return null;
+
+  } catch (error) {
+    console.error(`Goodreads scraping error for "${title}":`, error.message);
+    return null;
+  }
+}
 
 // Helper function to search Open Library
 async function searchOpenLibrary(title, author) {
@@ -112,6 +309,15 @@ async function searchGoogleBooks(title, author) {
 
     if (data.items && data.items.length > 0) {
       const bookInfo = data.items[0].volumeInfo;
+      
+      // Get ISBN (prefer ISBN-13 over ISBN-10)
+      let isbn = null;
+      if (bookInfo.industryIdentifiers) {
+        const isbn13 = bookInfo.industryIdentifiers.find(id => id.type === 'ISBN_13');
+        const isbn10 = bookInfo.industryIdentifiers.find(id => id.type === 'ISBN_10');
+        isbn = isbn13?.identifier || isbn10?.identifier || null;
+      }
+      
       return {
         title: bookInfo.title || title,
         author: bookInfo.authors?.[0] || author,
@@ -120,7 +326,7 @@ async function searchGoogleBooks(title, author) {
         description: bookInfo.description || '',
         thumbnail: bookInfo.imageLinks?.thumbnail || null,
         infoLink: bookInfo.infoLink || null,
-        isbn: bookInfo.industryIdentifiers?.[0]?.identifier || null,
+        isbn: isbn,
         publishYear: bookInfo.publishedDate ? parseInt(bookInfo.publishedDate.substring(0, 4)) : null,
         source: 'google'
       };
@@ -133,63 +339,51 @@ async function searchGoogleBooks(title, author) {
 }
 
 // Helper function to merge book data from multiple sources
-function mergeBookData(googleBook, openLibBook, originalTitle, originalAuthor) {
-  // If we have no data from either source, return null
-  if (!googleBook && !openLibBook) return null;
+function mergeBookData(googleBook, openLibBook, goodreadsBook, originalTitle, originalAuthor) {
+  // If we have no data from any source, return null
+  if (!googleBook && !openLibBook && !goodreadsBook) return null;
   
-  // Determine which source has better data
-  const googleHasRating = googleBook?.rating > 0;
-  const openLibHasRating = openLibBook?.rating > 0;
-  
-  // Prefer the source with more ratings for accuracy
-  let primary, secondary, ratingSource;
-  
-  if (googleHasRating && openLibHasRating) {
-    // Both have ratings - use the one with more rating count
-    if (googleBook.ratingsCount >= openLibBook.ratingsCount) {
-      primary = googleBook;
-      secondary = openLibBook;
-      ratingSource = `Google Books (${googleBook.ratingsCount} reviews)`;
-    } else {
-      primary = openLibBook;
-      secondary = googleBook;
-      ratingSource = `Open Library (${openLibBook.ratingsCount} reviews)`;
-    }
-  } else if (googleHasRating) {
-    primary = googleBook;
-    secondary = openLibBook;
-    ratingSource = `Google Books (${googleBook.ratingsCount} reviews)`;
-  } else if (openLibHasRating) {
-    primary = openLibBook;
-    secondary = googleBook;
-    ratingSource = `Open Library (${openLibBook.ratingsCount} reviews)`;
-  } else {
-    // Neither has ratings
-    primary = googleBook || openLibBook;
-    secondary = googleBook ? openLibBook : googleBook;
-    ratingSource = 'No ratings available';
+  // Priority: Goodreads > Google Books > Open Library for ratings
+  let rating = 0;
+  let ratingsCount = 0;
+  let ratingSource = 'No ratings available';
+
+  if (goodreadsBook?.rating > 0) {
+    rating = goodreadsBook.rating;
+    ratingsCount = goodreadsBook.ratingsCount;
+    ratingSource = `Goodreads (${ratingsCount.toLocaleString()} reviews)`;
+  } else if (googleBook?.rating > 0) {
+    rating = googleBook.rating;
+    ratingsCount = googleBook.ratingsCount;
+    ratingSource = `Google Books (${ratingsCount.toLocaleString()} reviews)`;
+  } else if (openLibBook?.rating > 0) {
+    rating = openLibBook.rating;
+    ratingsCount = openLibBook.ratingsCount;
+    ratingSource = `Open Library (${ratingsCount.toLocaleString()} reviews)`;
   }
+
+  // Use Google Books as primary for other data (most complete)
+  const primary = googleBook || openLibBook || {};
+  const secondary = openLibBook || googleBook || {};
   
-  // Merge data, preferring non-empty values
   return {
     title: primary.title || originalTitle,
     author: primary.author || originalAuthor,
-    rating: primary.rating || 0,
-    ratingsCount: primary.ratingsCount || 0,
+    rating: rating,
+    ratingsCount: ratingsCount,
     ratingSource: ratingSource,
-    // Prefer longer description
-    description: (primary.description?.length > (secondary?.description?.length || 0)) 
+    description: (primary.description?.length > (secondary.description?.length || 0)) 
       ? primary.description 
-      : (secondary?.description || primary.description || 'No description available'),
-    // Prefer thumbnail that exists
-    thumbnail: primary.thumbnail || secondary?.thumbnail || null,
-    infoLink: googleBook?.infoLink || null,
-    isbn: primary.isbn || secondary?.isbn || null,
-    publishYear: primary.publishYear || secondary?.publishYear || null,
-    // Track which sources provided data
+      : (secondary.description || primary.description || 'No description available'),
+    thumbnail: primary.thumbnail || secondary.thumbnail || null,
+    infoLink: googleBook?.infoLink || goodreadsBook?.url || null,
+    isbn: primary.isbn || secondary.isbn || null,
+    publishYear: primary.publishYear || secondary.publishYear || null,
+    goodreadsUrl: goodreadsBook?.url || null,
     sources: [
       googleBook ? 'Google Books' : null,
-      openLibBook ? 'Open Library' : null
+      openLibBook ? 'Open Library' : null,
+      goodreadsBook ? 'Goodreads' : null
     ].filter(Boolean)
   };
 }
@@ -197,7 +391,7 @@ function mergeBookData(googleBook, openLibBook, originalTitle, originalAuthor) {
 // Main scan endpoint
 app.post('/api/scan', async (req, res) => {
   try {
-    const { image } = req.body;
+    const { image, useGoodreads = true } = req.body;
 
     // Validation
     if (!image) {
@@ -269,19 +463,28 @@ app.post('/api/scan', async (req, res) => {
       return res.status(404).json({ error: 'No books found in the image' });
     }
 
-    console.log(`Found ${extractedBooks.length} books, fetching ratings from multiple sources...`);
+    console.log(`Found ${extractedBooks.length} books, fetching enriched data...`);
 
-    // Step 2: Get ratings from both Google Books and Open Library
+    // Step 2: Get data from all sources including Goodreads
     const bookPromises = extractedBooks.map(async (book) => {
       try {
-        // Query both APIs in parallel
+        // Query Google Books and Open Library in parallel
         const [googleBook, openLibBook] = await Promise.all([
           searchGoogleBooks(book.title, book.author),
           searchOpenLibrary(book.title, book.author)
         ]);
         
-        // Merge the data from both sources
-        return mergeBookData(googleBook, openLibBook, book.title, book.author);
+        // Get ISBN from either source for Goodreads lookup
+        const isbn = googleBook?.isbn || openLibBook?.isbn;
+        
+        // Query Goodreads if enabled (with rate limiting)
+        let goodreadsBook = null;
+        if (useGoodreads) {
+          goodreadsBook = await scrapeGoodreads(isbn, book.title, book.author);
+        }
+        
+        // Merge the data from all sources
+        return mergeBookData(googleBook, openLibBook, goodreadsBook, book.title, book.author);
       } catch (e) {
         console.error(`Error fetching book info for "${book.title}":`, e.message);
         return null;
@@ -335,9 +538,19 @@ app.use((req, res) => {
   res.status(404).json({ error: 'Endpoint not found' });
 });
 
+// Graceful shutdown
+process.on('SIGINT', async () => {
+  console.log('\nShutting down gracefully...');
+  if (redisClient) {
+    await redisClient.quit();
+  }
+  process.exit(0);
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
   console.log(`✅ Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`✅ OpenAI API Key: ${process.env.OPENAI_API_KEY ? 'Configured' : '❌ MISSING'}`);
+  console.log(`✅ Redis: ${isRedisReady ? 'Connected' : 'Not configured (caching disabled)'}`);
 });
