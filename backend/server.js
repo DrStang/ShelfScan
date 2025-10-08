@@ -137,17 +137,46 @@ function mergeBookData(googleBook, openLibBook, originalTitle, originalAuthor) {
   // If we have no data from either source, return null
   if (!googleBook && !openLibBook) return null;
   
-  // Start with the book that has a rating, or Google Books as fallback
-  const primary = (googleBook?.rating > 0) ? googleBook : (openLibBook || googleBook);
-  const secondary = (googleBook?.rating > 0) ? openLibBook : googleBook;
+  // Determine which source has better data
+  const googleHasRating = googleBook?.rating > 0;
+  const openLibHasRating = openLibBook?.rating > 0;
+  
+  // Prefer the source with more ratings for accuracy
+  let primary, secondary, ratingSource;
+  
+  if (googleHasRating && openLibHasRating) {
+    // Both have ratings - use the one with more rating count
+    if (googleBook.ratingsCount >= openLibBook.ratingsCount) {
+      primary = googleBook;
+      secondary = openLibBook;
+      ratingSource = `Google Books (${googleBook.ratingsCount} reviews)`;
+    } else {
+      primary = openLibBook;
+      secondary = googleBook;
+      ratingSource = `Open Library (${openLibBook.ratingsCount} reviews)`;
+    }
+  } else if (googleHasRating) {
+    primary = googleBook;
+    secondary = openLibBook;
+    ratingSource = `Google Books (${googleBook.ratingsCount} reviews)`;
+  } else if (openLibHasRating) {
+    primary = openLibBook;
+    secondary = googleBook;
+    ratingSource = `Open Library (${openLibBook.ratingsCount} reviews)`;
+  } else {
+    // Neither has ratings
+    primary = googleBook || openLibBook;
+    secondary = googleBook ? openLibBook : googleBook;
+    ratingSource = 'No ratings available';
+  }
   
   // Merge data, preferring non-empty values
   return {
     title: primary.title || originalTitle,
     author: primary.author || originalAuthor,
-    // Use the rating from whichever source has one, prefer higher count
-    rating: primary.rating > 0 ? primary.rating : (secondary?.rating || 0),
-    ratingsCount: primary.rating > 0 ? primary.ratingsCount : (secondary?.ratingsCount || 0),
+    rating: primary.rating || 0,
+    ratingsCount: primary.ratingsCount || 0,
+    ratingSource: ratingSource,
     // Prefer longer description
     description: (primary.description?.length > (secondary?.description?.length || 0)) 
       ? primary.description 
