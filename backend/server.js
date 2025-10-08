@@ -92,6 +92,84 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Debug endpoint for testing Goodreads scraping
+app.get('/api/debug-goodreads/:isbn', async (req, res) => {
+  const { isbn } = req.params;
+  
+  try {
+    console.log(`\n=== DEBUG: Testing ISBN ${isbn} ===`);
+    
+    const url = `https://www.goodreads.com/book/isbn/${isbn}`;
+    console.log(`Fetching: ${url}`);
+    
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      }
+    });
+    
+    if (!response.ok) {
+      return res.json({
+        error: `Goodreads returned ${response.status}`,
+        url: url
+      });
+    }
+    
+    const html = await response.text();
+    const $ = cheerio.load(html);
+    
+    // Extract all the data we're looking for
+    const debug = {
+      url: url,
+      statusCode: response.status,
+      metaRating: $('meta[itemprop="ratingValue"]').attr('content'),
+      metaCount: $('meta[itemprop="ratingCount"]').attr('content'),
+      title: $('h1[data-testid="bookTitle"]').text().trim() || $('h1').first().text().trim(),
+      author: $('[data-testid="name"]').first().text().trim() || $('a.authorName').first().text().trim(),
+      htmlSnippet: html.substring(0, 2000),
+      foundSelectors: {}
+    };
+    
+    // Check all possible selectors
+    const selectorsToTry = [
+      'meta[itemprop="ratingValue"]',
+      'span[itemprop="ratingValue"]',
+      '.RatingStatistics__rating',
+      '[data-testid="averageRating"]',
+      'script[type="application/ld+json"]'
+    ];
+    
+    selectorsToTry.forEach(selector => {
+      const elem = $(selector);
+      if (elem.length) {
+        debug.foundSelectors[selector] = elem.first().text().trim() || elem.first().attr('content') || 'exists';
+      }
+    });
+    
+    // Try JSON-LD
+    const scriptTags = $('script[type="application/ld+json"]');
+    if (scriptTags.length) {
+      debug.jsonLD = [];
+      scriptTags.each((i, elem) => {
+        try {
+          debug.jsonLD.push(JSON.parse($(elem).html()));
+        } catch (e) {
+          debug.jsonLD.push({ error: 'Failed to parse' });
+        }
+      });
+    }
+    
+    res.json(debug);
+    
+  } catch (error) {
+    res.status(500).json({
+      error: error.message,
+      stack: error.stack
+    });
+  }
+});
+
 // Helper function to get from cache
 async function getFromCache(key) {
   if (!isRedisReady) return null;
@@ -203,48 +281,90 @@ async function scrapeGoodreads(isbn, title, author) {
     let rating = 0;
     let ratingsCount = 0;
 
+    // Debug: Log what we're looking for
+    console.log(`Parsing HTML for: ${title}`);
+
     // Method 1: Try meta tags (most reliable)
-    const ratingMeta = $('meta[itemprop="ratingValue"]').attr('content') ||
-                       $('span[itemprop="ratingValue"]').text().trim();
+    const ratingMeta = $('meta[itemprop="ratingValue"]').attr('content');
+    const countMeta = $('meta[itemprop="ratingCount"]').attr('content');
     
-    const countMeta = $('meta[itemprop="ratingCount"]').attr('content') ||
-                      $('span[itemprop="ratingCount"]').text().trim();
+    console.log(`Meta tags - rating: ${ratingMeta}, count: ${countMeta}`);
 
     if (ratingMeta) {
       rating = parseFloat(ratingMeta);
+      if (countMeta) {
+        ratingsCount = parseInt(countMeta.replace(/,/g, ''));
+      }
     } else {
-      // Method 2: Try common CSS selectors
-      const ratingText = $('.RatingStatistics__rating').first().text().trim() ||
-                        $('[class*="RatingStars__rating"]').first().text().trim() ||
-                        $('[data-testid="averageRating"]').text().trim() ||
-                        $('.average[itemprop="ratingValue"]').text().trim();
-      
-      if (ratingText) {
-        const ratingMatch = ratingText.match(/(\d+\.?\d*)/);
-        if (ratingMatch) {
-          rating = parseFloat(ratingMatch[1]);
+      // Method 2: Look for any element with rating data
+      // Try to find the rating in JSON-LD structured data
+      const scriptTags = $('script[type="application/ld+json"]');
+      scriptTags.each((i, elem) => {
+        try {
+          const jsonData = JSON.parse($(elem).html());
+          if (jsonData.aggregateRating) {
+            rating = parseFloat(jsonData.aggregateRating.ratingValue) || 0;
+            ratingsCount = parseInt(jsonData.aggregateRating.ratingCount) || 0;
+            console.log(`Found in JSON-LD: ${rating}⭐ (${ratingsCount} ratings)`);
+          }
+        } catch (e) {
+          // Skip invalid JSON
+        }
+      });
+
+      // Method 3: Try various CSS selectors
+      if (rating === 0) {
+        const possibleRatingSelectors = [
+          '.RatingStatistics__rating',
+          '[class*="RatingStars__rating"]',
+          '[data-testid="averageRating"]',
+          '.average[itemprop="ratingValue"]',
+          'span[itemprop="ratingValue"]',
+          '[class*="bookPageMetadata"]',
+          'div[class*="RatingStatistics"] span',
+        ];
+
+        for (const selector of possibleRatingSelectors) {
+          const elem = $(selector).first();
+          if (elem.length) {
+            const text = elem.text().trim();
+            console.log(`Trying selector "${selector}": "${text}"`);
+            const ratingMatch = text.match(/(\d+\.?\d*)/);
+            if (ratingMatch) {
+              rating = parseFloat(ratingMatch[1]);
+              if (rating > 0 && rating <= 5) {
+                console.log(`Extracted rating from "${selector}": ${rating}`);
+                break;
+              }
+            }
+          }
         }
       }
-    }
 
-    if (countMeta) {
-      const cleanCount = countMeta.replace(/[,\s]/g, '');
-      const countMatch = cleanCount.match(/(\d+)/);
-      if (countMatch) {
-        ratingsCount = parseInt(countMatch[1]);
-      }
-    } else {
-      // Method 2: Try finding ratings count
-      const countText = $('.RatingStatistics__meta').first().text() ||
-                       $('[data-testid="ratingsCount"]').text() ||
-                       $('[class*="RatingStatistics"]').text() ||
-                       $('span[data-testid="ratingsCount"]').text();
-      
-      if (countText) {
-        const cleanCount = countText.replace(/[,\s]/g, '');
-        const countMatch = cleanCount.match(/(\d+)/);
-        if (countMatch) {
-          ratingsCount = parseInt(countMatch[1]);
+      // Method 4: Try to find ratings count
+      if (rating > 0 && ratingsCount === 0) {
+        const possibleCountSelectors = [
+          '.RatingStatistics__meta',
+          '[data-testid="ratingsCount"]',
+          '[class*="RatingStatistics"]',
+          'span[data-testid="ratingsCount"]',
+          'meta[itemprop="reviewCount"]'
+        ];
+
+        for (const selector of possibleCountSelectors) {
+          const elem = $(selector).first();
+          if (elem.length) {
+            const text = elem.attr('content') || elem.text();
+            const cleanCount = text.replace(/[,\s]/g, '');
+            const countMatch = cleanCount.match(/(\d+)/);
+            if (countMatch) {
+              ratingsCount = parseInt(countMatch[1]);
+              if (ratingsCount > 0) {
+                console.log(`Extracted count from "${selector}": ${ratingsCount}`);
+                break;
+              }
+            }
+          }
         }
       }
     }
@@ -264,6 +384,11 @@ async function scrapeGoodreads(isbn, title, author) {
       return result;
     }
 
+    // Debug: Save HTML snippet if rating not found (only in development)
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`HTML snippet (first 1000 chars):\n${html.substring(0, 1000)}`);
+    }
+    
     console.warn(`Could not extract rating from Goodreads for: ${title}`);
     return null;
 
