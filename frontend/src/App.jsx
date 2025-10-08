@@ -255,6 +255,19 @@ function App() {
                       </div>
                     )}
 
+                    {book.goodreadsUrl && (
+                      <div className="mb-4">
+                        <a
+                          href={book.goodreadsUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 text-sm text-amber-700 hover:text-amber-800"
+                        >
+                          <span className="font-semibold">View on Goodreads →</span>
+                        </a>
+                      </div>
+                    )}
+
                     <div className="mb-4">
                       <p className="text-gray-700 leading-relaxed line-clamp-4">
                         {book.description.replace(/<[^>]*>/g, '').substring(0, 300)}
