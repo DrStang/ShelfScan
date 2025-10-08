@@ -4,6 +4,7 @@ const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const cheerio = require('cheerio');
 const redis = require('redis');
+const fetch = require('node-fetch');
 require('dotenv').config();
 
 const app = express();
