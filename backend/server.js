@@ -10,6 +10,9 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Trust proxy - needed for Railway/Heroku/etc to get real IP addresses
+app.set('trust proxy', 1);
+
 // Redis client setup
 let redisClient;
 let isRedisReady = false;
@@ -130,85 +133,119 @@ async function scrapeGoodreads(isbn, title, author) {
     // Build search URL - prefer ISBN, fallback to title+author search
     let searchUrl;
     if (isbn) {
-      searchUrl = `https://www.goodreads.com/search?q=${encodeURIComponent(isbn)}`;
+      // Try direct book page first (more reliable)
+      searchUrl = `https://www.goodreads.com/book/isbn/${isbn}`;
     } else {
       searchUrl = `https://www.goodreads.com/search?q=${encodeURIComponent(`${title} ${author}`)}`;
     }
 
-    console.log(`🔍 Scraping Goodreads: ${title}`);
+    console.log(`🔍 Scraping Goodreads: ${title} (${isbn ? 'ISBN: ' + isbn : 'Title/Author search'})`);
 
     // Add delay to respect rate limits
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise(resolve => setTimeout(resolve, 1200));
 
     const response = await fetch(searchUrl, {
       headers: {
-        'User-Agent': 'BookScannerApp/1.0 (Personal Use; Educational Project)',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.5',
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept-Encoding': 'gzip, deflate, br',
         'Connection': 'keep-alive',
+        'Upgrade-Insecure-Requests': '1',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'none',
+        'Cache-Control': 'max-age=0'
       }
     });
 
     if (!response.ok) {
-      console.warn(`Goodreads returned ${response.status}`);
+      console.warn(`Goodreads returned ${response.status} for: ${title}`);
       return null;
     }
 
     const html = await response.text();
     const $ = cheerio.load(html);
 
-    // Try to find the first book result
-    const firstResult = $('.bookTitle').first();
-    if (!firstResult.length) {
-      console.warn('No Goodreads results found');
-      return null;
+    let bookUrl = searchUrl;
+    
+    // If we searched (not direct ISBN), get first result link
+    if (!isbn) {
+      const firstResult = $('.bookTitle').first();
+      if (!firstResult.length) {
+        console.warn(`No Goodreads search results found for: ${title}`);
+        return null;
+      }
+      const bookPath = firstResult.attr('href');
+      if (!bookPath) return null;
+      bookUrl = `https://www.goodreads.com${bookPath}`;
+      
+      // Fetch the actual book page
+      await new Promise(resolve => setTimeout(resolve, 1200));
+      
+      const bookResponse = await fetch(bookUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        }
+      });
+
+      if (!bookResponse.ok) {
+        console.warn(`Failed to fetch book page: ${bookUrl}`);
+        return null;
+      }
+
+      const bookHtml = await bookResponse.text();
+      $ = cheerio.load(bookHtml);
     }
 
-    // Get the book page URL
-    const bookPath = firstResult.attr('href');
-    if (!bookPath) return null;
-
-    const bookUrl = `https://www.goodreads.com${bookPath}`;
-
-    // Fetch the actual book page
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const bookResponse = await fetch(bookUrl, {
-      headers: {
-        'User-Agent': 'BookScannerApp/1.0 (Personal Use; Educational Project)',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.5',
-        'Connection': 'keep-alive',
-      }
-    });
-
-    if (!bookResponse.ok) return null;
-
-    const bookHtml = await bookResponse.text();
-    const $book = cheerio.load(bookHtml);
-
-    // Extract rating from meta tags (more reliable)
+    // Extract rating - try multiple selectors (Goodreads changes layout frequently)
     let rating = 0;
     let ratingsCount = 0;
 
-    // Try multiple selectors as Goodreads layout changes
-    const ratingMeta = $book('meta[itemprop="ratingValue"]').attr('content') ||
-                       $book('[itemprop="ratingValue"]').text().trim() ||
-                       $book('.RatingStatistics__rating').first().text().trim();
+    // Method 1: Try meta tags (most reliable)
+    const ratingMeta = $('meta[itemprop="ratingValue"]').attr('content') ||
+                       $('span[itemprop="ratingValue"]').text().trim();
     
-    const countMeta = $book('meta[itemprop="ratingCount"]').attr('content') ||
-                      $book('[itemprop="ratingCount"]').text().trim() ||
-                      $book('.RatingStatistics__meta').first().text();
+    const countMeta = $('meta[itemprop="ratingCount"]').attr('content') ||
+                      $('span[itemprop="ratingCount"]').text().trim();
 
     if (ratingMeta) {
       rating = parseFloat(ratingMeta);
+    } else {
+      // Method 2: Try common CSS selectors
+      const ratingText = $('.RatingStatistics__rating').first().text().trim() ||
+                        $('[class*="RatingStars__rating"]').first().text().trim() ||
+                        $('[data-testid="averageRating"]').text().trim() ||
+                        $('.average[itemprop="ratingValue"]').text().trim();
+      
+      if (ratingText) {
+        const ratingMatch = ratingText.match(/(\d+\.?\d*)/);
+        if (ratingMatch) {
+          rating = parseFloat(ratingMatch[1]);
+        }
+      }
     }
 
     if (countMeta) {
-      // Extract number from text like "1,234 ratings"
-      const countMatch = countMeta.replace(/,/g, '').match(/\d+/);
+      const cleanCount = countMeta.replace(/[,\s]/g, '');
+      const countMatch = cleanCount.match(/(\d+)/);
       if (countMatch) {
-        ratingsCount = parseInt(countMatch[0]);
+        ratingsCount = parseInt(countMatch[1]);
+      }
+    } else {
+      // Method 2: Try finding ratings count
+      const countText = $('.RatingStatistics__meta').first().text() ||
+                       $('[data-testid="ratingsCount"]').text() ||
+                       $('[class*="RatingStatistics"]').text() ||
+                       $('span[data-testid="ratingsCount"]').text();
+      
+      if (countText) {
+        const cleanCount = countText.replace(/[,\s]/g, '');
+        const countMatch = cleanCount.match(/(\d+)/);
+        if (countMatch) {
+          ratingsCount = parseInt(countMatch[1]);
+        }
       }
     }
 
@@ -222,11 +259,12 @@ async function scrapeGoodreads(isbn, title, author) {
 
       // Cache the result
       await setCache(cacheKey, result);
-      console.log(`✅ Goodreads found: ${title} - ${rating}⭐ (${ratingsCount} ratings)`);
+      console.log(`✅ Goodreads found: ${title} - ${rating}⭐ (${ratingsCount.toLocaleString()} ratings)`);
       
       return result;
     }
 
+    console.warn(`Could not extract rating from Goodreads for: ${title}`);
     return null;
 
   } catch (error) {
