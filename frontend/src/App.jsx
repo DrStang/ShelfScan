@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Upload, Book, Star, Loader2, AlertCircle } from 'lucide-react';
 
-export default function BookSpineScanner() {
+function App() {
   const [image, setImage] = useState(null);
   const [loading, setLoading] = useState(false);
   const [books, setBooks] = useState([]);
@@ -49,15 +49,31 @@ export default function BookSpineScanner() {
     setBooks([]);
 
     try {
+      // Check if backend is reachable
       const response = await fetch(`${API_URL}/api/scan`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ image })
+      }).catch(err => {
+        throw new Error(`Cannot connect to backend at ${API_URL}. Make sure the backend server is running.`);
       });
 
-      const data = await response.json();
+      // Try to parse JSON response
+      let data;
+      const contentType = response.headers.get('content-type');
+      
+      if (contentType && contentType.includes('application/json')) {
+        try {
+          data = await response.json();
+        } catch (jsonError) {
+          throw new Error('Backend returned invalid JSON. Check backend logs for errors.');
+        }
+      } else {
+        const text = await response.text();
+        throw new Error(`Backend error: ${text.substring(0, 200)}`);
+      }
 
       if (!response.ok) {
         // Handle rate limiting
@@ -66,7 +82,7 @@ export default function BookSpineScanner() {
           throw new Error('Too many requests. Please wait a few minutes and try again.');
         }
         
-        throw new Error(data.error || 'Failed to scan books');
+        throw new Error(data.error || `Server error (${response.status})`);
       }
 
       if (data.success && data.books) {
@@ -80,6 +96,7 @@ export default function BookSpineScanner() {
       }
 
     } catch (err) {
+      console.error('Scan error:', err);
       setError(err.message || 'An error occurred while scanning books');
     } finally {
       setLoading(false);
@@ -251,3 +268,5 @@ export default function BookSpineScanner() {
     </div>
   );
 }
+
+export default App;
