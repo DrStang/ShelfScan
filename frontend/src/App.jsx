@@ -247,12 +247,13 @@ function App() {
                           ({book.ratingsCount.toLocaleString()} ratings)
                         </span>
                       )}
-                      {book.sources && book.sources.length > 0 && (
-                        <span className="text-xs text-gray-400 ml-2">
-                          via {book.sources.join(' + ')}
-                        </span>
-                      )}
                     </div>
+                    
+                    {book.ratingSource && (
+                      <div className="mb-3 text-xs text-gray-500 bg-gray-50 px-3 py-2 rounded-lg inline-block">
+                        📊 Rating from: {book.ratingSource}
+                      </div>
+                    )}
 
                     <div className="mb-4">
                       <p className="text-gray-700 leading-relaxed line-clamp-4">
