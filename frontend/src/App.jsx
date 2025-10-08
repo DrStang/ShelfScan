@@ -130,7 +130,7 @@ function App() {
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-3 mb-2">
             <Book className="w-10 h-10 text-indigo-600" />
-            <h1 className="text-4xl font-bold text-gray-800">Book Spine Scanner</h1>
+            <h1 className="text-4xl font-bold text-gray-800">Shelf Scan</h1>
           </div>
           <p className="text-gray-600">Upload a photo of book spines to find the highest-rated books</p>
           
