@@ -7,9 +7,28 @@ function App() {
   const [books, setBooks] = useState([]);
   const [error, setError] = useState('');
   const [rateLimitError, setRateLimitError] = useState(false);
+  const [backendStatus, setBackendStatus] = useState(null);
 
   // Configure API endpoint - change this to your deployed backend URL
   const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+
+  // Check backend health on mount
+  React.useEffect(() => {
+    const checkBackend = async () => {
+      try {
+        const response = await fetch(`${API_URL}/api/health`);
+        const data = await response.json();
+        if (data.status === 'ok') {
+          setBackendStatus('connected');
+        } else {
+          setBackendStatus('error');
+        }
+      } catch (err) {
+        setBackendStatus('disconnected');
+      }
+    };
+    checkBackend();
+  }, [API_URL]);
 
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
