@@ -250,21 +250,8 @@ function App() {
                     </div>
                     
                     {book.ratingSource && (
-                      <div className="mb-3 text-xs text-gray-500 bg-gray-50 px-3 py-2 rounded-lg inline-block">
+                      <div className="mb-4 text-xs text-gray-500 bg-gray-50 px-3 py-2 rounded-lg inline-block">
                         📊 Rating from: {book.ratingSource}
-                      </div>
-                    )}
-
-                    {book.goodreadsUrl && (
-                      <div className="mb-4">
-                        <a
-                          href={book.goodreadsUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 text-sm text-amber-700 hover:text-amber-800"
-                        >
-                          <span className="font-semibold">View on Goodreads →</span>
-                        </a>
                       </div>
                     )}
 
@@ -275,16 +262,28 @@ function App() {
                       </p>
                     </div>
 
-                    {book.infoLink && (
-                      <a
-                        href={book.infoLink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-block px-4 py-2 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors font-medium"
-                      >
-                        View on Google Books →
-                      </a>
-                    )}
+                    <div className="flex gap-3">
+                      {book.infoLink && (
+                        <a
+                          href={book.infoLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-block px-4 py-2 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors font-medium"
+                        >
+                          Google Books →
+                        </a>
+                      )}
+                      {book.goodreadsUrl && (
+                        <a
+                          href={book.goodreadsUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-block px-4 py-2 bg-amber-100 text-amber-800 rounded-lg hover:bg-amber-200 transition-colors font-medium"
+                        >
+                          Goodreads →
+                        </a>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
