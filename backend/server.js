@@ -37,6 +37,134 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Helper function to search Open Library
+async function searchOpenLibrary(title, author) {
+  try {
+    const query = encodeURIComponent(`${title} ${author}`);
+    const response = await fetch(
+      `https://openlibrary.org/search.json?q=${query}&limit=1`
+    );
+    
+    if (!response.ok) return null;
+    
+    const data = await response.json();
+    
+    if (data.docs && data.docs.length > 0) {
+      const book = data.docs[0];
+      
+      // Open Library uses a rating system, try to get ratings
+      let rating = 0;
+      let ratingsCount = 0;
+      
+      // Get work key to fetch ratings
+      if (book.key) {
+        try {
+          const workKey = book.key.replace('/works/', '');
+          const ratingsResponse = await fetch(
+            `https://openlibrary.org${book.key}/ratings.json`
+          );
+          
+          if (ratingsResponse.ok) {
+            const ratingsData = await ratingsResponse.json();
+            if (ratingsData.summary && ratingsData.summary.average) {
+              rating = ratingsData.summary.average;
+              ratingsCount = ratingsData.summary.count || 0;
+            }
+          }
+        } catch (e) {
+          console.log('Could not fetch Open Library ratings');
+        }
+      }
+      
+      return {
+        title: book.title || title,
+        author: book.author_name?.[0] || author,
+        rating: rating,
+        ratingsCount: ratingsCount,
+        description: book.first_sentence?.[0] || '',
+        thumbnail: book.cover_i 
+          ? `https://covers.openlibrary.org/b/id/${book.cover_i}-M.jpg`
+          : null,
+        isbn: book.isbn?.[0] || null,
+        publishYear: book.first_publish_year || null,
+        source: 'openlibrary'
+      };
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Open Library API error:', error.message);
+    return null;
+  }
+}
+
+// Helper function to search Google Books
+async function searchGoogleBooks(title, author) {
+  try {
+    const query = encodeURIComponent(`${title} ${author}`);
+    const response = await fetch(
+      `https://www.googleapis.com/books/v1/volumes?q=${query}&maxResults=1`
+    );
+    
+    if (!response.ok) return null;
+    
+    const data = await response.json();
+
+    if (data.items && data.items.length > 0) {
+      const bookInfo = data.items[0].volumeInfo;
+      return {
+        title: bookInfo.title || title,
+        author: bookInfo.authors?.[0] || author,
+        rating: bookInfo.averageRating || 0,
+        ratingsCount: bookInfo.ratingsCount || 0,
+        description: bookInfo.description || '',
+        thumbnail: bookInfo.imageLinks?.thumbnail || null,
+        infoLink: bookInfo.infoLink || null,
+        isbn: bookInfo.industryIdentifiers?.[0]?.identifier || null,
+        publishYear: bookInfo.publishedDate ? parseInt(bookInfo.publishedDate.substring(0, 4)) : null,
+        source: 'google'
+      };
+    }
+    return null;
+  } catch (error) {
+    console.error('Google Books API error:', error.message);
+    return null;
+  }
+}
+
+// Helper function to merge book data from multiple sources
+function mergeBookData(googleBook, openLibBook, originalTitle, originalAuthor) {
+  // If we have no data from either source, return null
+  if (!googleBook && !openLibBook) return null;
+  
+  // Start with the book that has a rating, or Google Books as fallback
+  const primary = (googleBook?.rating > 0) ? googleBook : (openLibBook || googleBook);
+  const secondary = (googleBook?.rating > 0) ? openLibBook : googleBook;
+  
+  // Merge data, preferring non-empty values
+  return {
+    title: primary.title || originalTitle,
+    author: primary.author || originalAuthor,
+    // Use the rating from whichever source has one, prefer higher count
+    rating: primary.rating > 0 ? primary.rating : (secondary?.rating || 0),
+    ratingsCount: primary.rating > 0 ? primary.ratingsCount : (secondary?.ratingsCount || 0),
+    // Prefer longer description
+    description: (primary.description?.length > (secondary?.description?.length || 0)) 
+      ? primary.description 
+      : (secondary?.description || primary.description || 'No description available'),
+    // Prefer thumbnail that exists
+    thumbnail: primary.thumbnail || secondary?.thumbnail || null,
+    infoLink: googleBook?.infoLink || null,
+    isbn: primary.isbn || secondary?.isbn || null,
+    publishYear: primary.publishYear || secondary?.publishYear || null,
+    // Track which sources provided data
+    sources: [
+      googleBook ? 'Google Books' : null,
+      openLibBook ? 'Open Library' : null
+    ].filter(Boolean)
+  };
+}
+
 // Main scan endpoint
 app.post('/api/scan', async (req, res) => {
   try {
@@ -112,36 +240,19 @@ app.post('/api/scan', async (req, res) => {
       return res.status(404).json({ error: 'No books found in the image' });
     }
 
-    console.log(`Found ${extractedBooks.length} books`);
+    console.log(`Found ${extractedBooks.length} books, fetching ratings from multiple sources...`);
 
-    // Step 2: Get ratings from Google Books API
+    // Step 2: Get ratings from both Google Books and Open Library
     const bookPromises = extractedBooks.map(async (book) => {
       try {
-        const query = encodeURIComponent(`${book.title} ${book.author}`);
-        const response = await fetch(
-          `https://www.googleapis.com/books/v1/volumes?q=${query}&maxResults=1`
-        );
+        // Query both APIs in parallel
+        const [googleBook, openLibBook] = await Promise.all([
+          searchGoogleBooks(book.title, book.author),
+          searchOpenLibrary(book.title, book.author)
+        ]);
         
-        if (!response.ok) {
-          console.warn(`Google Books API error for "${book.title}"`);
-          return null;
-        }
-
-        const data = await response.json();
-
-        if (data.items && data.items.length > 0) {
-          const bookInfo = data.items[0].volumeInfo;
-          return {
-            title: book.title,
-            author: book.author,
-            rating: bookInfo.averageRating || 0,
-            ratingsCount: bookInfo.ratingsCount || 0,
-            description: bookInfo.description || 'No description available',
-            thumbnail: bookInfo.imageLinks?.thumbnail || null,
-            infoLink: bookInfo.infoLink || null
-          };
-        }
-        return null;
+        // Merge the data from both sources
+        return mergeBookData(googleBook, openLibBook, book.title, book.author);
       } catch (e) {
         console.error(`Error fetching book info for "${book.title}":`, e.message);
         return null;
