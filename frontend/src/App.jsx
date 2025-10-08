@@ -133,6 +133,20 @@ function App() {
             <h1 className="text-4xl font-bold text-gray-800">Book Spine Scanner</h1>
           </div>
           <p className="text-gray-600">Upload a photo of book spines to find the highest-rated books</p>
+          
+          {/* Backend Status Indicator */}
+          {backendStatus && (
+            <div className="mt-3 flex items-center justify-center gap-2">
+              <div className={`w-2 h-2 rounded-full ${
+                backendStatus === 'connected' ? 'bg-green-500' : 
+                backendStatus === 'disconnected' ? 'bg-red-500' : 'bg-yellow-500'
+              }`}></div>
+              <span className="text-sm text-gray-500">
+                Backend: {backendStatus === 'connected' ? 'Connected' : 
+                         backendStatus === 'disconnected' ? `Not reachable at ${API_URL}` : 'Error'}
+              </span>
+            </div>
+          )}
         </div>
 
         <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
@@ -233,6 +247,11 @@ function App() {
                           ({book.ratingsCount.toLocaleString()} ratings)
                         </span>
                       )}
+                      {book.sources && book.sources.length > 0 && (
+                        <span className="text-xs text-gray-400 ml-2">
+                          via {book.sources.join(' + ')}
+                        </span>
+                      )}
                     </div>
 
                     <div className="mb-4">
@@ -275,6 +294,11 @@ function App() {
                       </span>
                       {book.ratingsCount > 0 && (
                         <span className="text-xs text-gray-500">({book.ratingsCount})</span>
+                      )}
+                      {book.sources && book.sources.length > 0 && (
+                        <span className="text-xs text-gray-400 ml-1">
+                          • {book.sources.join('+')}
+                        </span>
                       )}
                     </div>
                   </div>
