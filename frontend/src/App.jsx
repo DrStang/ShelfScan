@@ -163,17 +163,13 @@ function App() {
                   </div>
                 )}
               </div>
-              <div>
               <input
                 type="file"
                 accept="image/*"
                 onChange={handleImageUpload}
                 className="hidden"
               />
-              <button onClick={() => document.getElementById('fileInput').click()}>
-                {file ? file.name : 'Take pic"}
-              </button>
-                  </div>
+              
             </label>
 
             {image && (
