@@ -166,6 +166,7 @@ function App() {
               <input
                 type="file"
                 accept="image/*"
+                capture
                 onChange={handleImageUpload}
                 className="hidden"
               />
