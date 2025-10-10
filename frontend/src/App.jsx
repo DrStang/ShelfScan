@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Upload, Book, Star, Loader2, AlertCircle } from 'lucide-react';
+import { Upload, Book, Star, Loader2, AlertCircle, Camera } from 'lucide-react';
 
 function App() {
   const [image, setImage] = useState(null);
@@ -33,30 +33,34 @@ function App() {
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
-      // Validate file size (10MB limit)
-      if (file.size > 10 * 1024 * 1024) {
-        setError('Image size must be less than 10MB');
-        return;
-      }
-
-      // Validate file type
-      if (!file.type.startsWith('image/')) {
-        setError('Please upload a valid image file');
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setImage(event.target.result);
-        setBooks([]);
-        setError('');
-        setRateLimitError(false);
-      };
-      reader.onerror = () => {
-        setError('Failed to read image file');
-      };
-      reader.readAsDataURL(file);
+      processImageFile(file);
     }
+  };
+
+  const processImageFile = (file) => {
+    // Validate file size (10MB limit)
+    if (file.size > 10 * 1024 * 1024) {
+      setError('Image size must be less than 10MB');
+      return;
+    }
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setError('Please upload a valid image file');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setImage(event.target.result);
+      setBooks([]);
+      setError('');
+      setRateLimitError(false);
+    };
+    reader.onerror = () => {
+      setError('Failed to read image file');
+    };
+    reader.readAsDataURL(file);
   };
 
   const scanBooks = async () => {
@@ -130,7 +134,7 @@ function App() {
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-3 mb-2">
             <Book className="w-10 h-10 text-indigo-600" />
-            <h1 className="text-4xl font-bold text-gray-800">Shelf Scan</h1>
+            <h1 className="text-4xl font-bold text-gray-800">Book Spine Scanner</h1>
           </div>
           <p className="text-gray-600">Upload a photo of book spines to find the highest-rated books</p>
           
@@ -158,7 +162,7 @@ function App() {
                 ) : (
                   <div className="flex flex-col items-center gap-3">
                     <Upload className="w-16 h-16 text-indigo-400" />
-                    <p className="text-lg text-gray-600">Click to upload book spine image</p>
+                    <p className="text-lg text-gray-600">Click to upload or take a photo</p>
                     <p className="text-sm text-gray-400">JPG, PNG up to 10MB</p>
                   </div>
                 )}
@@ -166,31 +170,75 @@ function App() {
               <input
                 type="file"
                 accept="image/*"
-                capture
                 onChange={handleImageUpload}
                 className="hidden"
               />
-              
             </label>
 
+            {/* Camera and Upload Buttons */}
+            {!image && (
+              <div className="flex gap-3 w-full max-w-md">
+                <label className="flex-1 cursor-pointer">
+                  <div className="px-6 py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2">
+                    <Camera className="w-5 h-5" />
+                    Take Photo
+                  </div>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                  />
+                </label>
+                
+                <label className="flex-1 cursor-pointer">
+                  <div className="px-6 py-3 bg-gray-600 text-white rounded-lg font-semibold hover:bg-gray-700 transition-colors flex items-center justify-center gap-2">
+                    <Upload className="w-5 h-5" />
+                    Upload File
+                  </div>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+            )}
+
             {image && (
-              <button
-                onClick={scanBooks}
-                disabled={loading}
-                className="px-8 py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Scanning Books...
-                  </>
-                ) : (
-                  <>
-                    <Book className="w-5 h-5" />
-                    Scan & Rate Books
-                  </>
-                )}
-              </button>
+              <div className="flex gap-3">
+                <button
+                  onClick={scanBooks}
+                  disabled={loading}
+                  className="px-8 py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      Scanning Books...
+                    </>
+                  ) : (
+                    <>
+                      <Book className="w-5 h-5" />
+                      Scan & Rate Books
+                    </>
+                  )}
+                </button>
+                
+                <button
+                  onClick={() => {
+                    setImage(null);
+                    setBooks([]);
+                    setError('');
+                  }}
+                  disabled={loading}
+                  className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 disabled:bg-gray-100 disabled:cursor-not-allowed transition-colors"
+                >
+                  Clear
+                </button>
+              </div>
             )}
           </div>
 
@@ -314,16 +362,6 @@ function App() {
                         <span className="text-xs text-gray-400 ml-1">
                           • {book.sources.join('+')}
                         </span>
-                      )}
-                      {book.goodreadsUrl && (
-                        <a
-                          href={book.goodreadsUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-block px-4 py-2 bg-amber-100 text-amber-800 rounded-lg hover:bg-amber-200 transition-colors font-medium"
-                        >
-                          Goodreads →
-                        </a>
                       )}
                     </div>
                   </div>
