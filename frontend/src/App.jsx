@@ -169,6 +169,9 @@ function App() {
                 onChange={handleImageUpload}
                 className="hidden"
               />
+              <button onClick={() => document.getElementById('fileInput').click()}>
+                {file ? file.name : 'Take pic"}
+              </button>
             </label>
 
             {image && (
