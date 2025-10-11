@@ -363,6 +363,16 @@ function App() {
                           • {book.sources.join('+')}
                         </span>
                       )}
+                      {book.goodreadsUrl && (
+                        <a
+                          href={book.goodreadsUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-block px-4 py-2 bg-amber-100 text-amber-800 rounded-lg hover:bg-amber-200 transition-colors font-medium"
+                        >
+                          Goodreads →
+                        </a>
+                      )}
                     </div>
                   </div>
                 </div>
