@@ -346,7 +346,12 @@ function App() {
             <h3 className="text-xl font-bold text-gray-800 mb-4">Other Books Found</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {books.slice(3).map((book, index) => (
-                <div key={index} className="flex gap-3 p-4 border border-gray-200 rounded-lg hover:border-indigo-300 transition-colors">
+                <a 
+                  href={book.goodreadsUrl}
+                  key={index} 
+                  className="flex gap-3 p-4 border border-gray-200 rounded-lg hover:border-indigo-300 transition-colors"
+                  >
+                </a>
                   <div className="flex-1">
                     <h4 className="font-semibold text-gray-800">{book.title}</h4>
                     <p className="text-sm text-gray-600">{book.author}</p>
@@ -374,8 +379,8 @@ function App() {
                         </a>
                       )}
                     </div>
-                  </div>
-                </div>
+
+               </div>
               ))}
             </div>
           </div>
