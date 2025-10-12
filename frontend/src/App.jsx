@@ -524,4 +524,3 @@ export default function BookSpineScanner() {
     </div>
   );
 }
-export default BookSpineScanner;
