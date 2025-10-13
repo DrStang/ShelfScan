@@ -558,7 +558,7 @@ export default function BookSpineScanner() {
                 </a>   
               ))}
             </div>
-         
+          </div>
         )}
       </div>
 
