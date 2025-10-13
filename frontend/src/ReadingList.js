@@ -325,4 +325,3 @@ export default function ReadingList({ isOpen, onClose }) {
   );
 }
 
-export default ReadingList;
