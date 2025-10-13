@@ -192,7 +192,8 @@ export default function BookSpineScanner() {
   const topThreeBooks = books.slice(0, 3);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       {/* Header */}
       <div className="bg-white shadow-sm">
         <div className="max-w-6xl mx-auto px-8 py-4 flex items-center justify-between">
@@ -566,7 +567,7 @@ export default function BookSpineScanner() {
       
       {/* Reading List Modal */}
       <ReadingList isOpen={showReadingList} onClose={() => setShowReadingList(false)} />
-    </div>
+    </>
   );
 }
 
