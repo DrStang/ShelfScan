@@ -14,6 +14,7 @@ export default function BookSpineScanner() {
   const [backendStatus, setBackendStatus] = useState(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [showReadingList, setShowReadingList] = useState(false);
   const [scanHistory, setScanHistory] = useState([]);
   const [savingScan, setSavingScan] = useState(false);
 
@@ -211,6 +212,13 @@ export default function BookSpineScanner() {
                 >
                   <History className="w-4 h-4" />
                   History
+                </button>
+                <button
+                  onClick={() => setShowReadingList(true)}
+                  className="px-4 py-2 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 transition-colors flex items-center gap-2"
+                >
+                  <BookOpen className="w-4 h-4" />
+                  Reading List
                 </button>
                 <div className="flex items-center gap-2 px-4 py-2 bg-indigo-50 rounded-lg">
                   <User className="w-4 h-4 text-indigo-600" />
@@ -524,8 +532,40 @@ export default function BookSpineScanner() {
         )}
       </div>
 
+              {books.slice(3).map((book, index) => (
+                <a href={book.goodreadsUrl} key={index} target="_blank" rel="noopener noreferrer">
+                  <div className="flex gap-3 p-4 border border-gray-200 rounded-lg hover:border-indigo-300 transition-colors">
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-gray-800">{book.title}</h4>
+                      <p className="text-sm text-gray-600">{book.author}</p>
+                      <div className="flex items-center gap-1 mt-1">
+                        <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                        <span className="text-sm font-medium">
+                          {book.rating > 0 ? book.rating.toFixed(1) : 'N/A'}
+                        </span>
+                        {book.ratingsCount > 0 && (
+                          <span className="text-xs text-gray-500">({book.ratingsCount})</span>
+                        )}
+                        {book.sources && book.sources.length > 0 && (
+                          <span className="text-xs text-gray-400 ml-1">
+                            • {book.sources.join('+')}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </a>   
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Auth Modal */}
       <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
+      
+      {/* Reading List Modal */}
+      <ReadingList isOpen={showReadingList} onClose={() => setShowReadingList(false)} />
     </div>
   );
 }
