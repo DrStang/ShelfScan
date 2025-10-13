@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Upload, Book, Trash2, Loader2, AlertCircle, CheckCircle, X, Star } from 'lucide-react';
 import { useAuth } from './AuthContext';
-import { supabase } from './supabaseClient';
 
-export default function ReadingList({ isOpen, onClose }) {
+function ReadingList({ isOpen, onClose }) {
   const [readingList, setReadingList] = useState([]);
   const [filteredBooks, setFilteredBooks] = useState([]);
   const [activeFilter, setActiveFilter] = useState('all');
@@ -65,6 +64,17 @@ export default function ReadingList({ isOpen, onClose }) {
       toRead,
       avgRating: avgRating > 0 ? avgRating.toFixed(1) : 'N/A'
     });
+  };
+
+  const handleFilterClick = (filter) => {
+    setActiveFilter(filter);
+    
+    if (filter === 'all') {
+      setFilteredBooks(readingList);
+    } else {
+      const filtered = readingList.filter(book => book.exclusive_shelf === filter);
+      setFilteredBooks(filtered);
+    }
   };
 
   const handleFileUpload = async (e) => {
@@ -150,21 +160,20 @@ export default function ReadingList({ isOpen, onClose }) {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
       <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full my-8">
+        {/* Header */}
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Book className="w-6 h-6 text-indigo-600" />
               <h2 className="text-2xl font-bold text-gray-800">My Reading List</h2>
             </div>
-            <button
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-600"
-            >
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
               <X className="w-6 h-6" />
             </button>
           </div>
         </div>
 
+        {/* Content */}
         <div className="p-6">
           {/* Import Section */}
           <div className="mb-6 p-4 bg-indigo-50 rounded-lg">
@@ -172,7 +181,7 @@ export default function ReadingList({ isOpen, onClose }) {
               Import from Goodreads
             </h3>
             <p className="text-sm text-gray-600 mb-4">
-              Export your Goodreads library and upload the generated CSV file here.
+              Export your Goodreads library and upload the CSV file here.
               <a
                 href="https://www.goodreads.com/review/import"
                 target="_blank"
@@ -241,42 +250,46 @@ export default function ReadingList({ isOpen, onClose }) {
           {/* Stats */}
           {stats && (
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-              <div 
+              <button
                 onClick={() => handleFilterClick('all')}
-                className={`bg-gray-50 rounded-lg p-4 text-center cursor-pointer transition-all hover:shadow-md ${
-                  activeFilter === 'all' ? 'ring-2 ring-indigo-500 bg-indigo-50' : ''
+                className={`rounded-lg p-4 text-center transition-all hover:shadow-md ${
+                  activeFilter === 'all' ? 'ring-2 ring-indigo-500 bg-indigo-50' : 'bg-gray-50'
                 }`}
               >
                 <div className="text-2xl font-bold text-gray-800">{stats.total}</div>
                 <div className="text-sm text-gray-600">Total Books</div>
-              </div>
-              <div 
+              </button>
+              
+              <button
                 onClick={() => handleFilterClick('read')}
-                className={`bg-green-50 rounded-lg p-4 text-center cursor-pointer transition-all hover:shadow-md ${
-                  activeFilter === 'read' ? 'ring-2 ring-green-500 bg-green-100' : ''
+                className={`rounded-lg p-4 text-center transition-all hover:shadow-md ${
+                  activeFilter === 'read' ? 'ring-2 ring-green-500 bg-green-100' : 'bg-green-50'
                 }`}
               >
                 <div className="text-2xl font-bold text-green-700">{stats.read}</div>
                 <div className="text-sm text-gray-600">Read</div>
-              </div>
-              <div 
+              </button>
+              
+              <button
                 onClick={() => handleFilterClick('currently-reading')}
-                className={`bg-blue-50 rounded-lg p-4 text-center cursor-pointer transition-all hover:shadow-md ${
-                  activeFilter === 'currently-reading' ? 'ring-2 ring-blue-500 bg-blue-100' : ''
+                className={`rounded-lg p-4 text-center transition-all hover:shadow-md ${
+                  activeFilter === 'currently-reading' ? 'ring-2 ring-blue-500 bg-blue-100' : 'bg-blue-50'
                 }`}
               >
                 <div className="text-2xl font-bold text-blue-700">{stats.currentlyReading}</div>
                 <div className="text-sm text-gray-600">Reading</div>
-              </div>
-              <div 
+              </button>
+              
+              <button
                 onClick={() => handleFilterClick('to-read')}
-                className={`bg-amber-50 rounded-lg p-4 text-center cursor-pointer transition-all hover:shadow-md ${
-                  activeFilter === 'to-read' ? 'ring-2 ring-amber-500 bg-amber-100' : ''
+                className={`rounded-lg p-4 text-center transition-all hover:shadow-md ${
+                  activeFilter === 'to-read' ? 'ring-2 ring-amber-500 bg-amber-100' : 'bg-amber-50'
                 }`}
               >
                 <div className="text-2xl font-bold text-amber-700">{stats.toRead}</div>
                 <div className="text-sm text-gray-600">To Read</div>
-              </div>
+              </button>
+              
               <div className="bg-purple-50 rounded-lg p-4 text-center">
                 <div className="text-2xl font-bold text-purple-700 flex items-center justify-center gap-1">
                   <Star className="w-5 h-5 fill-purple-700" />
@@ -299,7 +312,7 @@ export default function ReadingList({ isOpen, onClose }) {
               <p className="text-sm text-gray-400 mt-2">Upload your Goodreads CSV to get started!</p>
             </div>
           ) : (
-            <>
+            <div>
               {activeFilter !== 'all' && (
                 <div className="mb-4 flex items-center justify-between bg-indigo-50 px-4 py-2 rounded-lg">
                   <p className="text-sm text-indigo-700">
@@ -317,13 +330,11 @@ export default function ReadingList({ isOpen, onClose }) {
                   </button>
                 </div>
               )}
+              
               <div className="max-h-96 overflow-y-auto">
                 <div className="space-y-2">
                   {filteredBooks.map((book, index) => (
-                    <div
-                      key={index}
-                      className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg hover:border-indigo-300 transition-colors"
-                    >
+                    <div key={index} className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg hover:border-indigo-300 transition-colors">
                       <div className="flex-1 min-w-0">
                         <h4 className="font-semibold text-gray-800 truncate">{book.title}</h4>
                         <p className="text-sm text-gray-600 truncate">{book.author}</p>
@@ -350,42 +361,14 @@ export default function ReadingList({ isOpen, onClose }) {
                         </div>
                       </div>
                     </div>
-                  <div
-                    key={index}
-                    className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg hover:border-indigo-300 transition-colors"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-semibold text-gray-800 truncate">{book.title}</h4>
-                      <p className="text-sm text-gray-600 truncate">{book.author}</p>
-                      <div className="flex items-center gap-3 mt-1">
-                        {book.my_rating > 0 && (
-                          <div className="flex items-center gap-1">
-                            <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                            <span className="text-sm font-medium">{book.my_rating}</span>
-                          </div>
-                        )}
-                        {book.exclusive_shelf && (
-                          <span className={`text-xs px-2 py-1 rounded ${
-                            book.exclusive_shelf === 'read' ? 'bg-green-100 text-green-700' :
-                            book.exclusive_shelf === 'currently-reading' ? 'bg-blue-100 text-blue-700' :
-                            'bg-amber-100 text-amber-700'
-                          }`}>
-                            {book.exclusive_shelf === 'currently-reading' ? 'Reading' : 
-                             book.exclusive_shelf === 'to-read' ? 'To Read' : 'Read'}
-                          </span>
-                        )}
-                        {book.isbn13 && (
-                          <span className="text-xs text-gray-400">ISBN: {book.isbn13}</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </div>
           )}
         </div>
 
+        {/* Footer */}
         <div className="p-6 border-t border-gray-200 bg-gray-50">
           <button
             onClick={onClose}
@@ -398,3 +381,5 @@ export default function ReadingList({ isOpen, onClose }) {
     </div>
   );
 }
+
+export default ReadingList;
