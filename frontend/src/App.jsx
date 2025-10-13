@@ -562,6 +562,12 @@ export default function BookSpineScanner() {
         )}
       </div>
 
+            </div>
+          </div>
+        )}
+      </div>
+      {/* End of max-w-6xl container */}
+
       {/* Auth Modal */}
       <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
       
