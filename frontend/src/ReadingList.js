@@ -166,7 +166,7 @@ export default function ReadingList({ isOpen, onClose }) {
               Import from Goodreads
             </h3>
             <p className="text-sm text-gray-600 mb-4">
-              Export your Goodreads library and upload the CSV file here.
+              Export your Goodreads library and upload the generated CSV file here.
               <a
                 href="https://www.goodreads.com/review/import"
                 target="_blank"
