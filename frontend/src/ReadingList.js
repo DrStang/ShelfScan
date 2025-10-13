@@ -398,4 +398,3 @@ export default function ReadingList({ isOpen, onClose }) {
     </div>
   );
 }
-
