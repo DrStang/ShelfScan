@@ -193,7 +193,7 @@ export default function BookSpineScanner() {
 
   return (
     <>
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       {/* Header */}
       <div className="bg-white shadow-sm">
         <div className="max-w-6xl mx-auto px-8 py-4 flex items-center justify-between">
@@ -566,13 +566,13 @@ export default function BookSpineScanner() {
           </div>
         )}
       </div>
-      {/* End of max-w-6xl container */}
+      {/* End main content container */}
+    </div>
+    {/* End min-h-screen div */}
 
-      {/* Auth Modal */}
-      <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
-      
-      {/* Reading List Modal */}
-      <ReadingList isOpen={showReadingList} onClose={() => setShowReadingList(false)} />
+    {/* Modals */}
+    <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
+    <ReadingList isOpen={showReadingList} onClose={() => setShowReadingList(false)} />
     </>
   );
 }
