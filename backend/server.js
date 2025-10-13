@@ -4,6 +4,9 @@ const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const redis = require('redis');
 const fetch = require('node-fetch');
+const { createClient } = require('@supabase/supabase-js');
+const Papa = require('papaparse');
+const multer = require('multer');
 require('dotenv').config();
 
 const app = express();
@@ -11,6 +14,27 @@ const PORT = process.env.PORT || 3001;
 
 // Trust proxy - needed for Railway/Heroku/etc to get real IP addresses
 app.set('trust proxy', 1);
+
+// Initialize Supabase client
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_KEY
+);
+
+// Configure multer for file uploads (in-memory storage)
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === 'text/csv' || file.originalname.endsWith('.csv')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only CSV files are allowed'));
+    }
+  }
+});
 
 // Redis client setup
 let redisClient;
@@ -404,6 +428,194 @@ app.post('/api/scan', async (req, res) => {
       error: 'An unexpected error occurred',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
+  }
+});
+
+// Goodreads CSV Import endpoint
+app.post('/api/import-goodreads', upload.single('file'), async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    
+    if (authError || !user) {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    console.log(`Processing Goodreads CSV for user: ${user.id}`);
+
+    // Parse CSV
+    const csvText = req.file.buffer.toString('utf-8');
+    const parseResult = Papa.parse(csvText, {
+      header: true,
+      skipEmptyLines: true,
+      transformHeader: (header) => header.trim()
+    });
+
+    if (parseResult.errors.length > 0) {
+      console.error('CSV parse errors:', parseResult.errors);
+      return res.status(400).json({ 
+        error: 'Failed to parse CSV', 
+        details: parseResult.errors[0].message 
+      });
+    }
+
+    const books = parseResult.data;
+    console.log(`Parsed ${books.length} books from CSV`);
+
+    // Clear existing reading list for this user
+    const { error: deleteError } = await supabase
+      .from('reading_list')
+      .delete()
+      .eq('user_id', user.id);
+
+    if (deleteError) {
+      console.error('Error clearing reading list:', deleteError);
+      return res.status(500).json({ error: 'Failed to clear existing reading list' });
+    }
+
+    // Transform and insert books
+    const booksToInsert = books
+      .filter(book => book.Title && book.Title.trim()) // Only books with titles
+      .map(book => ({
+        user_id: user.id,
+        title: book.Title?.trim() || '',
+        author: book.Author?.trim() || null,
+        isbn: book.ISBN?.replace(/[="]/g, '').trim() || null,
+        isbn13: book.ISBN13?.replace(/[="]/g, '').trim() || null,
+        goodreads_book_id: book['Book Id']?.trim() || null,
+        my_rating: book['My Rating'] ? parseFloat(book['My Rating']) : null,
+        average_rating: book['Average Rating'] ? parseFloat(book['Average Rating']) : null,
+        date_added: book['Date Added'] ? new Date(book['Date Added']).toISOString() : null,
+        date_read: book['Date Read'] ? new Date(book['Date Read']).toISOString() : null,
+        bookshelves: book.Bookshelves ? book.Bookshelves.split(',').map(s => s.trim()) : [],
+        exclusive_shelf: book['Exclusive Shelf']?.trim() || null,
+        publisher: book.Publisher?.trim() || null,
+        binding: book.Binding?.trim() || null,
+        number_of_pages: book['Number of Pages'] ? parseInt(book['Number of Pages']) : null,
+        year_published: book['Year Published'] ? parseInt(book['Year Published']) : null,
+        original_publication_year: book['Original Publication Year'] ? parseInt(book['Original Publication Year']) : null
+      }));
+
+    // Insert in batches of 100
+    const batchSize = 100;
+    let insertedCount = 0;
+    
+    for (let i = 0; i < booksToInsert.length; i += batchSize) {
+      const batch = booksToInsert.slice(i, i + batchSize);
+      const { error: insertError } = await supabase
+        .from('reading_list')
+        .insert(batch);
+
+      if (insertError) {
+        console.error('Error inserting batch:', insertError);
+        return res.status(500).json({ 
+          error: 'Failed to import books', 
+          details: insertError.message,
+          importedSoFar: insertedCount
+        });
+      }
+      
+      insertedCount += batch.length;
+      console.log(`Inserted batch ${Math.floor(i / batchSize) + 1}, total: ${insertedCount}`);
+    }
+
+    console.log(`Successfully imported ${insertedCount} books`);
+
+    res.json({
+      success: true,
+      imported: insertedCount,
+      message: `Successfully imported ${insertedCount} books`
+    });
+
+  } catch (error) {
+    console.error('Import error:', error);
+    res.status(500).json({ 
+      error: 'An unexpected error occurred',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+// Get reading list endpoint
+app.get('/api/reading-list', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    
+    if (authError || !user) {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
+
+    const { data: books, error } = await supabase
+      .from('reading_list')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('date_added', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching reading list:', error);
+      return res.status(500).json({ error: 'Failed to fetch reading list' });
+    }
+
+    res.json({
+      success: true,
+      books: books || [],
+      count: books?.length || 0
+    });
+
+  } catch (error) {
+    console.error('Reading list fetch error:', error);
+    res.status(500).json({ error: 'An unexpected error occurred' });
+  }
+});
+
+// Delete reading list endpoint
+app.delete('/api/reading-list', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    
+    if (authError || !user) {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
+
+    const { error } = await supabase
+      .from('reading_list')
+      .delete()
+      .eq('user_id', user.id);
+
+    if (error) {
+      console.error('Error deleting reading list:', error);
+      return res.status(500).json({ error: 'Failed to delete reading list' });
+    }
+
+    res.json({
+      success: true,
+      message: 'Reading list cleared successfully'
+    });
+
+  } catch (error) {
+    console.error('Delete reading list error:', error);
+    res.status(500).json({ error: 'An unexpected error occurred' });
   }
 });
 
