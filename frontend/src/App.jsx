@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, Book, Star, Loader2, AlertCircle, Camera, User, LogOut, History } from 'lucide-react';
+import { Upload, Book, Star, Loader2, AlertCircle, Camera, User, LogOut, History, BookOpen } from 'lucide-react';
 import { useAuth } from './AuthContext';
 import AuthModal from './AuthModal';
+import ReadingList from './ReadingList';
 import { supabase } from './supabaseClient';
 
 export default function BookSpineScanner() {
@@ -490,6 +491,10 @@ export default function BookSpineScanner() {
           <div className="mt-8 bg-white rounded-xl shadow-lg p-6">
             <h3 className="text-xl font-bold text-gray-800 mb-4">Other Books Found</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {books.length > 3 && (
+          <div className="mt-8 bg-white rounded-xl shadow-lg p-6">
+            <h3 className="text-xl font-bold text-gray-800 mb-4">Other Books Found</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {books.slice(3).map((book, index) => (
                 <a href={book.goodreadsUrl} key={index} target="_blank" rel="noopener noreferrer">
                   <div className="flex gap-3 p-4 border border-gray-200 rounded-lg hover:border-indigo-300 transition-colors">
@@ -524,3 +529,5 @@ export default function BookSpineScanner() {
     </div>
   );
 }
+
+export default BookSpineScanner;
