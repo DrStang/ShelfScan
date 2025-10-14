@@ -17,6 +17,9 @@ function App() {
   const [showReadingList, setShowReadingList] = useState(false);
   const [scanHistory, setScanHistory] = useState([]);
   const [savingScan, setSavingScan] = useState(false);
+  const [showOnlyMatches, setShowOnlyMatches] = useState(false);
+  const [matchedCount, setMatchedCount] = useState(0);
+
 
   const { user, signOut, loading: authLoading } = useAuth();
   const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
@@ -120,76 +123,84 @@ function App() {
   };
 
   const scanBooks = async () => {
-    if (!image) return;
+  if (!image) return;
 
-    setLoading(true);
-    setError('');
-    setRateLimitError(false);
-    setBooks([]);
+  setLoading(true);
+  setError('');
+  setRateLimitError(false);
+  setBooks([]);
+  setMatchedCount(0);
 
-    try {
-      const response = await fetch(`${API_URL}/api/scan`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ image })
-      }).catch(err => {
-        throw new Error(`Cannot connect to backend at ${API_URL}. Make sure the backend server is running.`);
-      });
+  try {
+    const response = await fetch(`${API_URL}/api/scan`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ 
+        image,
+        userId: user?.id  // NEW: Pass user ID for cross-reference
+      })
+    }).catch(err => {
+      throw new Error(`Cannot connect to backend at ${API_URL}. Make sure the backend server is running.`);
+    });
 
-      let data;
-      const contentType = response.headers.get('content-type');
-      
-      if (contentType && contentType.includes('application/json')) {
-        try {
-          data = await response.json();
-        } catch (jsonError) {
-          throw new Error('Backend returned invalid JSON. Check backend logs for errors.');
-        }
-      } else {
-        const text = await response.text();
-        throw new Error(`Backend error: ${text.substring(0, 200)}`);
+    let data;
+    const contentType = response.headers.get('content-type');
+    
+    if (contentType && contentType.includes('application/json')) {
+      try {
+        data = await response.json();
+      } catch (jsonError) {
+        throw new Error('Backend returned invalid JSON. Check backend logs for errors.');
       }
-
-      if (!response.ok) {
-        if (response.status === 429) {
-          setRateLimitError(true);
-          throw new Error('Too many requests. Please wait a few minutes and try again.');
-        }
-        
-        throw new Error(data.error || `Server error (${response.status})`);
-      }
-
-      if (data.success && data.books) {
-        setBooks(data.books);
-        
-        // Auto-save scan for logged-in users
-        if (user) {
-          await saveScan(data.books);
-        }
-        
-        if (data.totalProcessed < data.totalFound) {
-          setError(`Found ${data.totalFound} books, but could only get ratings for ${data.totalProcessed}`);
-        }
-      } else {
-        throw new Error('Unexpected response from server');
-      }
-
-    } catch (err) {
-      console.error('Scan error:', err);
-      setError(err.message || 'An error occurred while scanning books');
-    } finally {
-      setLoading(false);
+    } else {
+      const text = await response.text();
+      throw new Error(`Backend error: ${text.substring(0, 200)}`);
     }
-  };
 
+    if (!response.ok) {
+      if (response.status === 429) {
+        setRateLimitError(true);
+        throw new Error('Too many requests. Please wait a few minutes and try again.');
+      }
+      
+      throw new Error(data.error || `Server error (${response.status})`);
+    }
+
+    if (data.success && data.books) {
+      setBooks(data.books);
+      setMatchedCount(data.matchedInReadingList || 0);  // NEW: Store match count
+      
+      // Auto-save scan for logged-in users
+      if (user) {
+        await saveScan(data.books);
+      }
+      
+      if (data.totalProcessed < data.totalFound) {
+        setError(`Found ${data.totalFound} books, but could only get ratings for ${data.totalProcessed}`);
+      }
+    } else {
+      throw new Error('Unexpected response from server');
+    }
+
+  } catch (err) {
+    console.error('Scan error:', err);
+    setError(err.message || 'An error occurred while scanning books');
+  } finally {
+    setLoading(false);
+  }
+};
   const handleSignOut = async () => {
     await signOut();
     setShowHistory(false);
   };
 
-  const topThreeBooks = books.slice(0, 3);
+  const displayBooks = showOnlyMatches 
+  ? books.filter(book => book.inReadingList)
+  : books;
+
+const topThreeBooks = displayBooks.slice(0, 3);
 
   return (
     <>
@@ -308,7 +319,28 @@ function App() {
               </div>
             )}
           </div>
-
+          {/* Reading List Match Notification */}
+          {user && matchedCount > 0 && (
+            <div className="mt-4 bg-emerald-50 border border-emerald-200 rounded-lg p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <BookOpen className="w-5 h-5 text-emerald-600" />
+                  <span className="font-semibold text-emerald-800">
+                    Found {matchedCount} book{matchedCount !== 1 ? 's' : ''} from your reading list!
+                  </span>
+                </div>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={showOnlyMatches}
+                    onChange={(e) => setShowOnlyMatches(e.target.checked)}
+                    className="w-4 h-4 text-emerald-600 rounded"
+                  />
+                  <span className="text-sm font-medium text-emerald-700">Show only my books</span>
+                </label>
+              </div>
+            </div>
+          )}
           <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
             <div className="flex flex-col items-center gap-4">
               <label className="w-full cursor-pointer">
@@ -419,7 +451,9 @@ function App() {
               </h2>
               
               {topThreeBooks.map((book, index) => (
-                <div key={index} className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
+              <div key={index} className={`bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow ${
+                book.inReadingList ? 'ring-4 ring-emerald-400' : ''
+              }`}>                  
                   <div className="flex gap-6 p-6">
                     {book.thumbnail && (
                       <img 
@@ -439,6 +473,23 @@ function App() {
                           <p className="text-lg text-gray-600 mb-2">by {book.author}</p>
                         </div>
                       </div>
+                      {/* Reading List Badge - ADD THIS */}
+                      {book.inReadingList && (
+                        <div className="mb-4 inline-flex items-center gap-2 bg-emerald-100 text-emerald-800 px-4 py-2 rounded-lg border border-emerald-300">
+                          <BookOpen className="w-5 h-5" />
+                          <div>
+                            <span className="font-bold">📚 On Your Reading List!</span>
+                            {book.readingListInfo && (
+                              <div className="text-sm mt-1">
+                                Shelf: <span className="capitalize">{book.readingListInfo.shelf?.replace('-', ' ')}</span>
+                                {book.readingListInfo.myRating && (
+                                  <span> • Your Rating: {book.readingListInfo.myRating}★</span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
 
                       <div className="flex items-center gap-4 mb-4">
                         <div className="flex items-center gap-1">
@@ -502,26 +553,39 @@ function App() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {books.slice(3).map((book, index) => (
                   <a href={book.goodreadsUrl} key={index} target="_blank" rel="noopener noreferrer">
-                    <div className="flex gap-3 p-4 border border-gray-200 rounded-lg hover:border-indigo-300 transition-colors">
-                      <div className="flex-1">
+                   <div className={`flex gap-3 p-4 border rounded-lg hover:border-indigo-300 transition-colors ${
+                    book.inReadingList ? 'bg-emerald-50 border-emerald-300 ring-2 ring-emerald-200' : 'border-gray-200'
+                  }`}>
+                    <div className="flex-1">
+                      <div className="flex items-start justify-between">
                         <h4 className="font-semibold text-gray-800">{book.title}</h4>
-                        <p className="text-sm text-gray-600">{book.author}</p>
-                        <div className="flex items-center gap-1 mt-1">
-                          <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                          <span className="text-sm font-medium">
-                            {book.rating > 0 ? book.rating.toFixed(1) : 'N/A'}
-                          </span>
-                          {book.ratingsCount > 0 && (
-                            <span className="text-xs text-gray-500">({book.ratingsCount})</span>
-                          )}
-                          {book.sources && book.sources.length > 0 && (
-                            <span className="text-xs text-gray-400 ml-1">
-                              • {book.sources.join('+')}
-                            </span>
-                          )}
-                        </div>
+                        {book.inReadingList && (
+                          <BookOpen className="w-4 h-4 text-emerald-600 flex-shrink-0 ml-2" />
+                        )}
                       </div>
+                      <p className="text-sm text-gray-600">{book.author}</p>
+                      <div className="flex items-center gap-1 mt-1">
+                        <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                        <span className="text-sm font-medium">
+                          {book.rating > 0 ? book.rating.toFixed(1) : 'N/A'}
+                        </span>
+                        {book.ratingsCount > 0 && (
+                          <span className="text-xs text-gray-500">({book.ratingsCount})</span>
+                        )}
+                        {book.sources && book.sources.length > 0 && (
+                          <span className="text-xs text-gray-400 ml-1">
+                            • {book.sources.join('+')}
+                          </span>
+                        )}
+                      </div>
+                      {/* NEW: Show shelf for matched books */}
+                      {book.inReadingList && book.readingListInfo && (
+                        <div className="text-xs text-emerald-700 mt-1 font-medium">
+                          {book.readingListInfo.shelf?.replace('-', ' ')}
+                        </div>
+                      )}
                     </div>
+                  </div>
                   </a>
                 ))}
               </div>
