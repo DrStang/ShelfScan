@@ -282,11 +282,63 @@ function mergeBookData(googleBook, openLibBook, originalTitle, originalAuthor) {
     ].filter(Boolean)
   };
 }
+// Helper function to check if book is in reading list
+function checkReadingList(book, readingList) {
+  if (!readingList || readingList.length === 0) return null;
+  
+  const normalizeString = (str) => {
+    if (!str) return '';
+    return str.toLowerCase().trim().replace(/[^\w\s]/g, '');
+  };
+  
+  const bookTitle = normalizeString(book.title);
+  const bookAuthor = normalizeString(book.author);
+  const bookIsbn = book.isbn?.replace(/[^\d]/g, '');
+  
+  // Try to find match in reading list
+  for (const listItem of readingList) {
+    const listTitle = normalizeString(listItem.title);
+    const listAuthor = normalizeString(listItem.author);
+    const listIsbn = listItem.isbn?.replace(/[^\d]/g, '');
+    const listIsbn13 = listItem.isbn13?.replace(/[^\d]/g, '');
+    
+    // Match by ISBN (most reliable)
+    if (bookIsbn && (bookIsbn === listIsbn || bookIsbn === listIsbn13)) {
+      return {
+        matched: true,
+        matchType: 'isbn',
+        shelf: listItem.exclusive_shelf,
+        myRating: listItem.my_rating,
+        dateRead: listItem.date_read,
+        dateAdded: listItem.date_added
+      };
+    }
+    
+    // Match by title + author
+    if (bookTitle && listTitle && bookTitle === listTitle) {
+      if (bookAuthor && listAuthor && 
+          (bookAuthor === listAuthor || 
+           bookAuthor.includes(listAuthor) || 
+           listAuthor.includes(bookAuthor))) {
+        return {
+          matched: true,
+          matchType: 'title-author',
+          shelf: listItem.exclusive_shelf,
+          myRating: listItem.my_rating,
+          dateRead: listItem.date_read,
+          dateAdded: listItem.date_added
+        };
+      }
+    }
+  }
+  
+  return null;
+}
 
 // Main scan endpoint
 app.post('/api/scan', async (req, res) => {
   try {
-    const { image } = req.body;
+    const { image, userId } = req.body;  // ADD userId parameter
 
     // Validation
     if (!image) {
@@ -297,10 +349,28 @@ app.post('/api/scan', async (req, res) => {
       return res.status(400).json({ error: 'Invalid image format' });
     }
 
-    // Check OpenAI API key
     if (!process.env.OPENAI_API_KEY) {
       console.error('OPENAI_API_KEY not configured');
       return res.status(500).json({ error: 'Server configuration error' });
+    }
+
+    // NEW: Load user's reading list if userId provided
+    let readingList = [];
+    if (userId) {
+      try {
+        const { data, error } = await supabase
+          .from('reading_list')
+          .select('*')
+          .eq('user_id', userId);
+        
+        if (!error && data) {
+          readingList = data;
+          console.log(`Loaded ${readingList.length} books from reading list for cross-reference`);
+        }
+      } catch (err) {
+        console.error('Error loading reading list:', err);
+        // Continue without reading list
+      }
     }
 
     // Step 1: Extract books using OpenAI Vision
@@ -343,7 +413,6 @@ app.post('/api/scan', async (req, res) => {
 
     const openaiData = await openaiResponse.json();
     
-    // Parse extracted books
     let extractedBooks = [];
     try {
       const responseText = openaiData.choices[0].message.content.trim();
@@ -363,26 +432,21 @@ app.post('/api/scan', async (req, res) => {
     // Step 2: Get data from Google Books and Open Library (with caching)
     const bookPromises = extractedBooks.map(async (book) => {
       try {
-        // Create cache key based on title + author
         const cacheKey = `book:${book.title.toLowerCase()}:${book.author.toLowerCase()}`;
         
-        // Check cache first
         const cached = await getFromCache(cacheKey);
         if (cached) {
           console.log(`✅ Cache hit: ${book.title}`);
           return cached;
         }
         
-        // Query Google Books and Open Library in parallel
         const [googleBook, openLibBook] = await Promise.all([
           searchGoogleBooks(book.title, book.author),
           searchOpenLibrary(book.title, book.author)
         ]);
         
-        // Merge the data from both sources
         const mergedData = mergeBookData(googleBook, openLibBook, book.title, book.author);
         
-        // Cache the result
         if (mergedData) {
           await setCache(cacheKey, mergedData);
           console.log(`✅ Fetched and cached: ${book.title}`);
@@ -405,6 +469,24 @@ app.post('/api/scan', async (req, res) => {
       });
     }
 
+    // NEW: Cross-reference with reading list
+    let matchedCount = 0;
+    if (readingList.length > 0) {
+      console.log(`Cross-referencing ${validBooks.length} books with reading list...`);
+      
+      validBooks.forEach(book => {
+        const match = checkReadingList(book, readingList);
+        if (match) {
+          book.inReadingList = true;
+          book.readingListInfo = match;
+          matchedCount++;
+          console.log(`✅ Match found: "${book.title}" - Shelf: ${match.shelf}`);
+        }
+      });
+      
+      console.log(`Found ${matchedCount} matches in reading list`);
+    }
+
     // Sort by rating (and number of ratings as tiebreaker)
     validBooks.sort((a, b) => {
       if (b.rating !== a.rating) {
@@ -419,7 +501,8 @@ app.post('/api/scan', async (req, res) => {
       success: true,
       books: validBooks,
       totalFound: extractedBooks.length,
-      totalProcessed: validBooks.length
+      totalProcessed: validBooks.length,
+      matchedInReadingList: matchedCount  // NEW: return match count
     });
 
   } catch (error) {
@@ -430,7 +513,6 @@ app.post('/api/scan', async (req, res) => {
     });
   }
 });
-
 // Goodreads CSV Import endpoint
 app.post('/api/import-goodreads', upload.single('file'), async (req, res) => {
   try {
