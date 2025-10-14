@@ -211,7 +211,7 @@ const topThreeBooks = displayBooks.slice(0, 3);
           <div className="max-w-6xl mx-auto px-8 py-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Book className="w-8 h-8 text-indigo-600" />
-              <h1 className="text-2xl font-bold text-gray-800">Book Spine Scanner</h1>
+              <h1 className="text-2xl font-bold text-gray-800">Shelf Scan</h1>
             </div>
             
             <div className="flex items-center gap-3">
@@ -299,7 +299,8 @@ const topThreeBooks = displayBooks.slice(0, 3);
 
           {/* Main Scanner Interface */}
           <div className="text-center mb-8">
-            <p className="text-gray-600">Upload a photo of book spines to find the highest-rated books</p>
+            <p className="text-gray-600">Upload a photo of book spines to find the highest-rated books.</p>
+            <p className="text-gray-600">Optionally register/sign-in to store your scan history and to see if a scanned book is in your Goodreads reading list!</p>
             
             {backendStatus && (
               <div className="mt-3 flex items-center justify-center gap-2">
