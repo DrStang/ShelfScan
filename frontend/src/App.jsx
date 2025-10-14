@@ -4,6 +4,7 @@ import { useAuth } from './AuthContext';
 import AuthModal from './AuthModal';
 import ReadingList from './ReadingList';
 import { supabase } from './supabaseClient';
+import { SpeedInsights } from "@vercel/speed-insights/react";
 
 function App() {
   const [image, setImage] = useState(null);
