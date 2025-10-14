@@ -9,7 +9,7 @@
     "react-scripts": "5.0.1",
     "lucide-react": "^0.263.1",
     "@supabase/supabase-js": "^2.39.0",
-    "@vercel/speed-insights"
+    "@vercel/speed-insights": "^1.2.0"
   },
   "scripts": {
     "start": "react-scripts start",
