@@ -388,7 +388,6 @@ function ReadingList({ isOpen, onClose }) {
         </div>
       </div>
     </div>
-  </div>
   );
 }
 
