@@ -318,7 +318,8 @@ function mergeBookData(googleBook, openLibBook, originalTitle, originalAuthor) {
     amazonUrl = `https://www.amazon.com/s?k=${searchQuery}&tag=${AMAZON_AFFILIATE_TAG}`;
     console.log(`No ISBN - using title/author search for: ${originalTitle}`);
   }
-  
+    console.log(`📚 ${originalTitle}: Amazon URL = ${amazonUrl}`);
+
   return {
     title: primary.title || originalTitle,
     author: primary.author || originalAuthor,
