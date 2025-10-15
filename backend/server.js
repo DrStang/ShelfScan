@@ -234,6 +234,7 @@ async function searchGoogleBooks(title, author) {
 }
 
 // Helper function to merge book data from multiple sources
+// Helper function to merge book data from multiple sources
 function mergeBookData(googleBook, openLibBook, originalTitle, originalAuthor) {
   // If we have no data from any source, return null
   if (!googleBook && !openLibBook) return null;
@@ -257,8 +258,23 @@ function mergeBookData(googleBook, openLibBook, originalTitle, originalAuthor) {
   const primary = googleBook || openLibBook || {};
   const secondary = openLibBook || googleBook || {};
   
-  // Get ISBN for Goodreads link
+  // Get ISBN for links
   const isbn = primary.isbn || secondary.isbn;
+  
+  // *** AMAZON AFFILIATE INTEGRATION ***
+  // Replace 'yourname-20' with your actual Amazon Associate Tag
+  const AMAZON_AFFILIATE_TAG = process.env.AMAZON_AFFILIATE_TAG || 'yourname-20';
+  
+  // Create Amazon search URL with affiliate tag
+  let amazonUrl;
+  if (isbn) {
+    // If we have ISBN, link directly to the book
+    amazonUrl = `https://www.amazon.com/dp/${isbn}/?tag=${AMAZON_AFFILIATE_TAG}`;
+  } else {
+    // Otherwise, create a search link
+    const searchQuery = encodeURIComponent(`${originalTitle} ${originalAuthor}`);
+    amazonUrl = `https://www.amazon.com/s?k=${searchQuery}&tag=${AMAZON_AFFILIATE_TAG}`;
+  }
   
   return {
     title: primary.title || originalTitle,
@@ -273,9 +289,10 @@ function mergeBookData(googleBook, openLibBook, originalTitle, originalAuthor) {
     infoLink: googleBook?.infoLink || null,
     isbn: isbn,
     publishYear: primary.publishYear || secondary.publishYear || null,
-    // Add Goodreads link (no scraping, just a link)
     goodreadsUrl: isbn ? `https://www.goodreads.com/book/isbn/${isbn}` : 
                   `https://www.goodreads.com/search?q=${encodeURIComponent(`${originalTitle} ${originalAuthor}`)}`,
+    // *** NEW: Amazon Affiliate Link ***
+    amazonUrl: amazonUrl,
     sources: [
       googleBook ? 'Google Books' : null,
       openLibBook ? 'Open Library' : null
