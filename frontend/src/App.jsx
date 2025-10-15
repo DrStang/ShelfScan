@@ -521,7 +521,6 @@ const topThreeBooks = displayBooks.slice(0, 3);
                       </div>
 
                       <div className="flex gap-3 flex-wrap">
-                        {book.amazonUrl && (
                           <a
                             href={book.amazonUrl}
                             target="_blank"
@@ -533,7 +532,6 @@ const topThreeBooks = displayBooks.slice(0, 3);
                             </svg>
                             Buy on Amazon
                           </a>
-                        )}
                         {book.infoLink && (
                           <a
                             href={book.infoLink}
