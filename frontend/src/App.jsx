@@ -607,6 +607,7 @@ const topThreeBooks = displayBooks.slice(0, 3);
             </div>
           )}
         </div>
+      </div>
         {/* Enhanced Footer with More Options */}
       <footer className="mt-16 pb-8">
         <div className="max-w-6xl mx-auto px-8 py-4 flex items-center justify-between">
@@ -686,7 +687,6 @@ const topThreeBooks = displayBooks.slice(0, 3);
           </div>
         </div>
       </footer>
-      </div>
       
       <SpeedInsights />
 
