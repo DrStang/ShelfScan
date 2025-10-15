@@ -234,6 +234,27 @@ async function searchGoogleBooks(title, author) {
 }
 
 // Helper function to merge book data from multiple sources
+// Helper function to convert ISBN-13 to ISBN-10
+function isbn13to10(isbn13) {
+  if (!isbn13 || isbn13.length !== 13) return null;
+  
+  // ISBN-10 can only be converted from ISBN-13 starting with 978
+  if (!isbn13.startsWith('978')) return null;
+  
+  // Remove the 978 prefix and last digit (checksum)
+  const base = isbn13.substring(3, 12);
+  
+  // Calculate ISBN-10 checksum
+  let sum = 0;
+  for (let i = 0; i < 9; i++) {
+    sum += parseInt(base[i]) * (10 - i);
+  }
+  let checksum = (11 - (sum % 11)) % 11;
+  checksum = checksum === 10 ? 'X' : checksum.toString();
+  
+  return base + checksum;
+}
+
 // Helper function to merge book data from multiple sources
 function mergeBookData(googleBook, openLibBook, originalTitle, originalAuthor) {
   // If we have no data from any source, return null
@@ -262,18 +283,40 @@ function mergeBookData(googleBook, openLibBook, originalTitle, originalAuthor) {
   const isbn = primary.isbn || secondary.isbn;
   
   // *** AMAZON AFFILIATE INTEGRATION ***
-  // Replace 'yourname-20' with your actual Amazon Associate Tag
-  const AMAZON_AFFILIATE_TAG = process.env.AMAZON_AFFILIATE_TAG || 'yourname-20';
+  const AMAZON_AFFILIATE_TAG = process.env.AMAZON_AFFILIATE_TAG || 'shelfscan05-20';
   
-  // Create Amazon search URL with affiliate tag
+  // Create Amazon URL with affiliate tag
   let amazonUrl;
   if (isbn) {
-    // If we have ISBN, link directly to the book
-    amazonUrl = `https://www.amazon.com/dp/${isbn}/?tag=${AMAZON_AFFILIATE_TAG}`;
+    // Clean ISBN (remove hyphens and spaces)
+    const cleanIsbn = isbn.replace(/[-\s]/g, '');
+    
+    // Try to use ISBN-10 for Amazon /dp/ links (they work better)
+    let amazonIsbn = cleanIsbn;
+    
+    // If it's ISBN-13, try to convert to ISBN-10
+    if (cleanIsbn.length === 13) {
+      const isbn10 = isbn13to10(cleanIsbn);
+      if (isbn10) {
+        amazonIsbn = isbn10;
+        console.log(`Converted ISBN-13 ${cleanIsbn} to ISBN-10 ${isbn10}`);
+      }
+    }
+    
+    // Use direct product link if we have ISBN-10, otherwise use search
+    if (amazonIsbn.length === 10) {
+      amazonUrl = `https://www.amazon.com/dp/${amazonIsbn}?tag=${AMAZON_AFFILIATE_TAG}`;
+    } else {
+      // ISBN-13 or unexpected format - use search with ISBN
+      const searchQuery = encodeURIComponent(`${originalTitle} ${originalAuthor} ISBN ${cleanIsbn}`);
+      amazonUrl = `https://www.amazon.com/s?k=${searchQuery}&tag=${AMAZON_AFFILIATE_TAG}`;
+      console.log(`Using search URL for ISBN: ${cleanIsbn}`);
+    }
   } else {
-    // Otherwise, create a search link
+    // No ISBN available, create a search link
     const searchQuery = encodeURIComponent(`${originalTitle} ${originalAuthor}`);
     amazonUrl = `https://www.amazon.com/s?k=${searchQuery}&tag=${AMAZON_AFFILIATE_TAG}`;
+    console.log(`No ISBN - using title/author search for: ${originalTitle}`);
   }
   
   return {
@@ -291,7 +334,7 @@ function mergeBookData(googleBook, openLibBook, originalTitle, originalAuthor) {
     publishYear: primary.publishYear || secondary.publishYear || null,
     goodreadsUrl: isbn ? `https://www.goodreads.com/book/isbn/${isbn}` : 
                   `https://www.goodreads.com/search?q=${encodeURIComponent(`${originalTitle} ${originalAuthor}`)}`,
-    // *** NEW: Amazon Affiliate Link ***
+    // *** Amazon Affiliate Link ***
     amazonUrl: amazonUrl,
     sources: [
       googleBook ? 'Google Books' : null,
