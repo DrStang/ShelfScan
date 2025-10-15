@@ -187,7 +187,7 @@ function ReadingList({ isOpen, onClose }) {
               Import from Goodreads
             </h3>
             <p className="text-xs text-gray-600 mb-4">
-              Due to Goodreads restrictions, your library cannot be directly connected here and must be exported. Note because of this, changes to your library will not automatically be imported here. 
+              Due to Goodreads restrictions, your library cannot be directly connected here and must be exported. Note because of this, changes to your library will not be automatically imported here. 
            </p>
             <p className="text-sm text-gray-600 mb-4">
               Export your Goodreads library and upload the generated CSV file here.
