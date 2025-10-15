@@ -520,7 +520,20 @@ const topThreeBooks = displayBooks.slice(0, 3);
                         </p>
                       </div>
 
-                      <div className="flex gap-3">
+                      <div className="flex gap-3 flex-wrap">
+                        {book.amazonUrl && (
+                          <a
+                            href={book.amazonUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-block px-6 py-3 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors font-bold shadow-md hover:shadow-lg flex items-center gap-2"
+                          >
+                            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                              <path d="M.045 18.02c.072-.116.187-.124.348-.022 3.636 2.11 7.594 3.166 11.87 3.166 2.852 0 5.668-.533 8.447-1.595l.315-.14c.138-.06.234-.1.293-.13.226-.088.39-.046.525.13.12.174.09.336-.12.48-.256.19-.6.41-1.006.654-1.244.743-2.64 1.316-4.185 1.726-1.53.406-3.045.61-4.516.61-2.265 0-4.434-.403-6.5-1.21-2.064-.807-3.86-1.91-5.375-3.312-.114-.104-.18-.234-.18-.39 0-.06.016-.107.046-.14zm15.006-8.52c.887 0 1.59.2 2.11.598.52.4.78.95.78 1.65 0 .67-.21 1.43-.63 2.27l-3.45 6.84c-.15.3-.38.45-.67.45-.2 0-.38-.07-.52-.21-.15-.15-.22-.33-.22-.55 0-.11.03-.24.09-.38l3.43-6.8c.29-.57.43-1.03.43-1.37 0-.3-.09-.53-.27-.69-.18-.16-.45-.24-.82-.24-.53 0-1.14.21-1.83.63-.69.42-1.32 1-1.88 1.74-.57.74-1.02 1.58-1.37 2.52-.35.94-.52 1.9-.52 2.86 0 .67.13 1.17.4 1.5.26.33.65.5 1.17.5.58 0 1.24-.14 1.98-.43.74-.29 1.36-.64 1.85-1.05.13-.11.24-.16.33-.16.15 0 .27.06.36.17.09.11.13.24.13.38 0 .26-.18.53-.54.81-.75.58-1.63 1.03-2.64 1.37-1.01.33-1.95.5-2.81.5-1.06 0-1.88-.27-2.46-.8-.58-.54-.87-1.29-.87-2.26 0-1.13.22-2.25.67-3.37.44-1.12 1.05-2.12 1.81-3 .77-.88 1.63-1.58 2.59-2.09.96-.51 1.93-.77 2.92-.77zm1.81-5.5c.48 0 .89.17 1.23.51.34.34.51.75.51 1.23 0 .49-.17.9-.51 1.24-.34.34-.75.51-1.23.51-.49 0-.9-.17-1.24-.51-.34-.34-.51-.75-.51-1.24 0-.48.17-.89.51-1.23.34-.34.75-.51 1.24-.51z"/>
+                            </svg>
+                            Buy on Amazon
+                          </a>
+                        )}
                         {book.infoLink && (
                           <a
                             href={book.infoLink}
@@ -594,7 +607,87 @@ const topThreeBooks = displayBooks.slice(0, 3);
             </div>
           )}
         </div>
+        {/* Enhanced Footer with More Options */}
+      <footer className="mt-16 pb-8">
+        <div className="max-w-4xl mx-auto">
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            {/* Main Disclosure */}
+            <div className="text-center mb-6">
+              <p className="text-sm text-gray-600 mb-2">
+                <strong className="text-gray-800">📢 Disclosure:</strong> As an Amazon Associate I earn from qualifying purchases. 
+                This means if you click on an Amazon link and make a purchase, I may receive a small commission at no extra cost to you.
+              </p>
+              <p className="text-xs text-gray-500">
+                Ratings and reviews are sourced from Google Books and Open Library. 
+                This tool is not affiliated with Amazon, Goodreads, or Google.
+              </p>
+            </div>
+
+            {/* Divider */}
+            <div className="border-t border-gray-200 my-4"></div>
+
+            {/* Footer Links */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+              {/* About */}
+              <div>
+                <h4 className="font-semibold text-gray-800 text-sm mb-2">About</h4>
+                <p className="text-xs text-gray-600">
+                  Scan book spines with AI to discover ratings and find your next great read.
+                </p>
+              </div>
+
+              {/* Policies */}
+              <div>
+                <h4 className="font-semibold text-gray-800 text-sm mb-2">Policies</h4>
+                <div className="space-y-1">
+                  <a 
+                    href="https://affiliate-program.amazon.com/help/operating/policies" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="block text-xs text-indigo-600 hover:text-indigo-800 hover:underline"
+                  >
+                    Amazon Associates Policy
+                  </a>
+                  <a 
+                    href="/privacy" 
+                    className="block text-xs text-indigo-600 hover:text-indigo-800 hover:underline"
+                  >
+                    Privacy Policy
+                  </a>
+                </div>
+              </div>
+
+              {/* Contact */}
+              <div>
+                <h4 className="font-semibold text-gray-800 text-sm mb-2">Contact</h4>
+                <p className="text-xs text-gray-600">
+                  Questions or feedback?
+                </p>
+                <a 
+                  href="mailto:hello@bookspinescanner.com" 
+                  className="text-xs text-indigo-600 hover:text-indigo-800 hover:underline"
+                >
+                  hello@bookspinescanner.com
+                </a>
+              </div>
+            </div>
+
+            {/* Bottom Bar */}
+            <div className="mt-6 pt-4 border-t border-gray-200">
+              <div className="flex flex-col md:flex-row items-center justify-between gap-3 text-xs text-gray-500">
+                <span>© 2025 Book Spine Scanner. All rights reserved.</span>
+                <div className="flex items-center gap-3">
+                  <span>Made with ❤️ for book lovers</span>
+                  <span className="hidden md:inline">•</span>
+                  <span>Powered by OpenAI Vision</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </footer>
       </div>
+      
       <SpeedInsights />
 
       {/* Modals */}
