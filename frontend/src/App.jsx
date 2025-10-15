@@ -609,7 +609,7 @@ const topThreeBooks = displayBooks.slice(0, 3);
         </div>
         {/* Enhanced Footer with More Options */}
       <footer className="mt-16 pb-8">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-6xl mx-auto px-8 py-4 flex items-center justify-between">
           <div className="bg-white rounded-lg shadow-sm p-6">
             {/* Main Disclosure */}
             <div className="text-center mb-6">
@@ -675,7 +675,7 @@ const topThreeBooks = displayBooks.slice(0, 3);
             {/* Bottom Bar */}
             <div className="mt-6 pt-4 border-t border-gray-200">
               <div className="flex flex-col md:flex-row items-center justify-between gap-3 text-xs text-gray-500">
-                <span>© 2025 Book Spine Scanner. All rights reserved.</span>
+                <span>© 2025 Shelf Scan. All rights reserved.</span>
                 <div className="flex items-center gap-3">
                   <span>Made with ❤️ for book lovers</span>
                   <span className="hidden md:inline">•</span>
