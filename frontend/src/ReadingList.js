@@ -159,6 +159,10 @@ function ReadingList({ isOpen, onClose }) {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+      <div className="w-full h-full flex items-center justify-center p-4" style={{
+        paddingTop: 'max(1rem, env(safe-area-inset-top))',
+        paddingBottom: 'max(1rem, env(safe-area-inset-bottom))'
+      }}>
       <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full my-8">
         {/* Header */}
         <div className="p-6 border-b border-gray-200">
@@ -174,14 +178,17 @@ function ReadingList({ isOpen, onClose }) {
         </div>
 
         {/* Content */}
-        <div className="p-6">
+        <div className="p-6 overflow-y-auto flex-1">
           {/* Import Section */}
           <div className="mb-6 p-4 bg-indigo-50 rounded-lg">
             <h3 className="text-lg font-semibold text-gray-800 mb-2">
               Import from Goodreads
             </h3>
+            <p className="text-xs text-gray-600 mb-4">
+              Due to Goodreads restrictions, your library cannot be directly connected here and must be exported. Note because of this, changes to your library will not automatically be imported here. 
+           </p>
             <p className="text-sm text-gray-600 mb-4">
-              Export your Goodreads library and upload the CSV file here.
+              Export your Goodreads library and upload the generated CSV file here.
               <a
                 href="https://www.goodreads.com/review/import"
                 target="_blank"
