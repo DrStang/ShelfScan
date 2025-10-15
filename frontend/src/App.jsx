@@ -608,9 +608,10 @@ const topThreeBooks = displayBooks.slice(0, 3);
           )}
         </div>
       </div>
+
         {/* Enhanced Footer with More Options */}
       <footer className="mt-16 pb-8">
-        <div className="max-w-6xl mx-auto px-8 py-4 flex items-center justify-between">
+        <div className="max-w-4xl mx-auto">
           <div className="bg-white rounded-lg shadow-sm p-6">
             {/* Main Disclosure */}
             <div className="text-center mb-6">
