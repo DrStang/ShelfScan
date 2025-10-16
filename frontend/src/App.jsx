@@ -538,7 +538,7 @@ const topThreeBooks = displayBooks.slice(0, 3);
                             rel="noopener noreferrer"
                             className="inline-block mt-2"
                           >
-                           <img src={amazonImage} className="w-6 h-6">
+                           <img src={amazonImage} className="w-6 h-6"/>
                           </a>
                         {book.infoLink && (
                           <a
