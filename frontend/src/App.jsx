@@ -547,7 +547,7 @@ const topThreeBooks = displayBooks.slice(0, 3);
                                   fillRule: "nonzero",
                                   opacity: 1,
                                 }}
-                                transform="translate(1.4065934065934016 1.4065934065934016) scale(2.81 2.81)"
+                                transform="translate(71.91906614785992 71.9190661478599) scale(1.24 1.24)"
                               >
                                 <path
                                   d="M 69.637 65.363 H 20.363 C 9.117 65.363 0 56.246 0 45 v 0 c 0 -11.246 9.117 -20.363 20.363 -20.363 h 49.273 C 80.883 24.637 90 33.754 90 45 v 0 C 90 56.246 80.883 65.363 69.637 65.363 z"
@@ -694,7 +694,7 @@ const topThreeBooks = displayBooks.slice(0, 3);
                                   strokeLinecap="round"
                                 />
                               </g>
-                            </svg>                    
+                            </svg>                
                           </a>
                         {book.infoLink && (
                           <a
