@@ -520,7 +520,7 @@ const topThreeBooks = displayBooks.slice(0, 3);
                         </p>
                       </div>
 
-                      <div className="flex gap-3 flex-wrap">
+                      <div className="flex flex-wrap gap-3 items-center">
                           <a
                             href={book.amazonUrl}
                             target="_blank"
@@ -702,10 +702,10 @@ const topThreeBooks = displayBooks.slice(0, 3);
                             href={book.infoLink}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center justify-center px-4 py-2 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors font-medium min-h-[40px]"
+                            className="inline-flex items-center justify-center px-3 py-2 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors font-medium min-h-[40px] text-sm"
 
                           >
-                            Google Books →
+                            Google →
                           </a>
                         )}
                         {book.goodreadsUrl && (
@@ -713,7 +713,7 @@ const topThreeBooks = displayBooks.slice(0, 3);
                             href={book.goodreadsUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center justify-center px-4 py-2 bg-amber-100 text-amber-800 rounded-lg hover:bg-amber-200 transition-colors font-medium min-h-[40px]"
+                            className="inline-flex items-center justify-center px-3 py-2 bg-amber-100 text-amber-800 rounded-lg hover:bg-amber-200 transition-colors font-medium min-h-[40px] text-sm"
                             >
                             Goodreads →
                           </a>
