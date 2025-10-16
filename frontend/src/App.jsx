@@ -536,9 +536,13 @@ const topThreeBooks = displayBooks.slice(0, 3);
                             href={book.amazonUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-block mt-2"
-                          >
-                           <img src={amazonImage} className="w-6 h-6"/>
+                          className="inline-flex items-center justify-center" 
+                            >
+                           <img 
+                             src={amazonImage} 
+                             alt="By on Amazon"
+                             className="h-9 w-auto sm:h-10 hover:opacity-80 transition-opacity"
+                             />
                           </a>
                         {book.infoLink && (
                           <a
