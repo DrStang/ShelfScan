@@ -872,7 +872,7 @@ const topThreeBooks = displayBooks.slice(0, 3);
       <LinkModal 
         show={showLinkModal}
         onClose={() => setShowLinkModal(false)}
-        items={selectedBook}
+        book={selectedBook}
         />
     </>
   );
