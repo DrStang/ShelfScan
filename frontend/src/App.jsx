@@ -18,6 +18,7 @@ function App() {
   const [showHistory, setShowHistory] = useState(false);
   const [showReadingList, setShowReadingList] = useState(false);
   const [showLinkModal, setShowLinkModal] = useState(false);
+  const [selectedBook, setSelectedBook] = useState(null);
   const [scanHistory, setScanHistory] = useState([]);
   const [savingScan, setSavingScan] = useState(false);
   const [showOnlyMatches, setShowOnlyMatches] = useState(false);
@@ -203,6 +204,11 @@ function App() {
   const displayBooks = showOnlyMatches 
   ? books.filter(book => book.inReadingList)
   : books;
+
+  const openLinkModal = (bookData) => {
+    setSelectedBook(bookData);
+    setShowLinkModal(true);
+};
 
 const topThreeBooks = displayBooks.slice(0, 3);
 
@@ -737,7 +743,7 @@ const topThreeBooks = displayBooks.slice(0, 3);
                    <div className={`flex gap-3 p-4 border rounded-lg hover:border-indigo-300 transition-colors ${
                     book.inReadingList ? 'bg-emerald-50 border-emerald-300 ring-2 ring-emerald-200' : 'border-gray-200'
                   }`}
-                  onClick={() => setShowLinkModal(true)}
+                  onClick={() => openLinkModal(book)}
                    >
                     <div className="flex-1">
                       <div className="flex items-start justify-between">
@@ -865,7 +871,7 @@ const topThreeBooks = displayBooks.slice(0, 3);
       <LinkModal 
         show={showLinkModal}
         onClose={() => setShowLinkModal(false)}
-        items={books}
+        items={selectedBook}
         />
     </>
   );
