@@ -532,7 +532,8 @@ const topThreeBooks = displayBooks.slice(0, 3);
                               version="1.1"
                               xmlSpace="preserve"
                               viewBox="0 0 90 90"
-                              className="w-16 h-6"
+                              width="90"
+                              height="90"
                               >
                               <g
                                 style={{
