@@ -73,7 +73,7 @@ const LinkModal = ({ show, onClose, items = [] }) => {
                                                         strokeLinejoin: "miter",
                                                         strokeMiterlimit: 10,
                                                         fill: "none",
-                                                        fillRule: ""nonzero",",
+                                                        fillRule: "nonzero",
                                                         opacity: 1,
                                                     }}
                                                     transform="translate(76.40155642023348 76.40155642023345) scale(1.14 1.14)"
@@ -88,7 +88,7 @@ const LinkModal = ({ show, onClose, items = [] }) => {
                                                             strokeLinejoin: "miter",
                                                             strokeMiterlimit: 10,
                                                             fill: "rgb(34,34,34)",
-                                                            fillRule: ""nonzero",",
+                                                            fillRule: "nonzero",
                                                             opacity: 1,
                                                         }}
                                                         transform=" matrix(1 0 0 1 0 0) "
@@ -104,7 +104,7 @@ const LinkModal = ({ show, onClose, items = [] }) => {
                                                             strokeLinejoin: "miter",
                                                             strokeMiterlimit: 10,
                                                             fill: "rgb(34,34,34)",
-                                                            fillRule: ""nonzero",",
+                                                            fillRule: "nonzero",
                                                             opacity: 1,
                                                         }}
                                                             transform=" matrix(1 0 0 1 0 0) "
@@ -120,7 +120,7 @@ const LinkModal = ({ show, onClose, items = [] }) => {
                                                             strokeLinejoin: "miter",
                                                             strokeMiterlimit: 10,
                                                             fill: rgb(34, 34, 34),
-                                                            fillRule: ""nonzero",",
+                                                            fillRule: "nonzero",
                                                             opacity: 1,
                                                         }}
                                                         transform=" matrix(1 0 0 1 0 0) "
@@ -136,7 +136,7 @@ const LinkModal = ({ show, onClose, items = [] }) => {
                                                             strokeLinejoin: "miter",
                                                             strokeMiterlimit: 10,
                                                             fill: "rgb(34,34,34)",
-                                                            fillRule: ""nonzero",",
+                                                            fillRule: "nonzero",
                                                             opacity: 1,
                                                         }}
                                                             transform=" matrix(1 0 0 1 0 0) "
@@ -152,7 +152,7 @@ const LinkModal = ({ show, onClose, items = [] }) => {
                                                             strokeLinejoin: "miter",
                                                             strokeMiterlimit: 10,
                                                             fill: "rgb(34,34,34)",
-                                                            fillRule: ""nonzero",",
+                                                            fillRule: "nonzero",
                                                             opacity: 1,
                                                         }}
                                                             transform=" matrix(1 0 0 1 0 0) "
