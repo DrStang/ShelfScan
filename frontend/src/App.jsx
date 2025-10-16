@@ -218,53 +218,68 @@ const topThreeBooks = displayBooks.slice(0, 3);
     <>
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
         {/* Header */}
+
         <div className="bg-white shadow-sm">
-          <div className="max-w-6xl mx-auto px-8 py-4 flex items-center justify-between">
-            <div className="flex items-center justify-center gap-2 sm:gap-3 mb-2">
-              <Book className="w-8 h-8 sm:w-10 sm:h-10 text-indigo-600" />
-              <h1 className="text-2xl sm:text-4xl font-bold text-gray-800">Shelf Scan</h1>
-            </div>
-            
-            <div className="flex items-center gap-3">
-              {authLoading ? (
-                <div className="text-sm text-gray-500">Loading...</div>
-              ) : user ? (
-                <>
+          <div className="max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-4">
+            <div className="flex items-center justify-between">
+              {/* Logo and Title - Left Side */}
+              <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
+                <Book className="w-7 h-7 sm:w-10 sm:h-10 text-indigo-600" />
+                <h1 className="text-xl sm:text-3xl lg:text-4xl font-bold text-gray-800 whitespace-nowrap">Shelf Scan</h1>
+              </div>
+              
+              {/* Navigation Buttons - Right Side */}
+              <div className="flex items-center gap-1.5 sm:gap-2 lg:gap-3">
+                {authLoading ? (
+                  <div className="text-xs text-gray-500">...</div>
+                ) : user ? (
+                  <>
+                    {/* History Button */}
+                    <button
+                      onClick={() => setShowHistory(!showHistory)}
+                      className="p-2 sm:px-3 sm:py-2 lg:px-4 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-1.5"
+                      title="History"
+                    >
+                      <History className="w-4 h-4" />
+                      <span className="hidden lg:inline text-sm">History</span>
+                    </button>
+                    
+                    {/* Reading List Button */}
+                    <button
+                      onClick={() => setShowReadingList(true)}
+                      className="p-2 sm:px-3 sm:py-2 lg:px-4 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 transition-colors flex items-center gap-1.5"
+                      title="Reading List"
+                    >
+                      <BookOpen className="w-4 h-4" />
+                      <span className="hidden lg:inline text-sm">List</span>
+                    </button>
+                    
+                    {/* User Email - Hidden on mobile */}
+                    <div className="hidden xl:flex items-center gap-2 px-3 py-2 bg-indigo-50 rounded-lg">
+                      <User className="w-4 h-4 text-indigo-600" />
+                      <span className="text-sm text-gray-700 max-w-[120px] truncate">{user.email}</span>
+                    </div>
+                    
+                    {/* Sign Out Button */}
+                    <button
+                      onClick={handleSignOut}
+                      className="p-2 sm:px-3 sm:py-2 lg:px-4 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-1.5"
+                      title="Sign Out"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      <span className="hidden lg:inline text-sm">Out</span>
+                    </button>
+                  </>
+                ) : (
                   <button
-                    onClick={() => setShowHistory(!showHistory)}
-                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2"
+                    onClick={() => setShowAuthModal(true)}
+                    className="px-3 py-2 sm:px-4 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-1.5"
                   >
-                    <History className="w-4 h-4" />
-                    History
+                    <User className="w-4 h-4" />
+                    <span className="text-sm">Sign In</span>
                   </button>
-                  <button
-                    onClick={() => setShowReadingList(true)}
-                    className="px-4 py-2 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 transition-colors flex items-center gap-2"
-                  >
-                    <BookOpen className="w-4 h-4" />
-                    Reading List
-                  </button>
-                  <div className="flex items-center gap-2 px-4 py-2 bg-indigo-50 rounded-lg">
-                    <User className="w-4 h-4 text-indigo-600" />
-                    <span className="text-sm text-gray-700">{user.email}</span>
-                  </div>
-                  <button
-                    onClick={handleSignOut}
-                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2"
-                  >
-                    <LogOut className="w-4 h-4" />
-                    Sign Out
-                  </button>
-                </>
-              ) : (
-                <button
-                  onClick={() => setShowAuthModal(true)}
-                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2"
-                >
-                  <User className="w-4 h-4" />
-                  Sign In
-                </button>
-              )}
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -531,17 +546,17 @@ const topThreeBooks = displayBooks.slice(0, 3);
                         </p>
                       </div>
 
-                      <div className="flex flex-wrap gap-3 items-center">
+                      <div className="flex flex-wrap gap-2 items-center justify-start">
                           <a
                             href={book.amazonUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                          className="inline-flex items-center justify-center" 
+                            className="inline-flex items-center justify-center"
                             >
                            <img 
                              src={amazonImage} 
                              alt="By on Amazon"
-                             className="h-9 w-auto sm:h-10 hover:opacity-80 transition-opacity"
+                             className="h-10 w-auto sm:h-12 hover:opacity-80 transition-opacity"
                              />
                           </a>
                         {book.infoLink && (
