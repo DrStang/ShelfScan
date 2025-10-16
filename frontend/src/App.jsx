@@ -696,14 +696,14 @@ const topThreeBooks = displayBooks.slice(0, 3);
                               />
                             </g>
                           </svg>
-                        Buy on Amazon               
                           </a>
                         {book.infoLink && (
                           <a
                             href={book.infoLink}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-block px-4 py-2 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors font-medium"
+                            className="inline-flex items-center justify-center px-4 py-2 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors font-medium min-h-[40px]"
+
                           >
                             Google Books →
                           </a>
@@ -713,8 +713,8 @@ const topThreeBooks = displayBooks.slice(0, 3);
                             href={book.goodreadsUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-block px-4 py-2 bg-amber-100 text-amber-800 rounded-lg hover:bg-amber-200 transition-colors font-medium"
-                          >
+                            className="inline-flex items-center justify-center px-4 py-2 bg-amber-100 text-amber-800 rounded-lg hover:bg-amber-200 transition-colors font-medium min-h-[40px]"
+                            >
                             Goodreads →
                           </a>
                         )}
