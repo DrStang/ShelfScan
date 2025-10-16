@@ -206,6 +206,7 @@ function App() {
   : books;
 
   const openLinkModal = (bookData) => {
+    console.log("Opening modal for book:", bookData); // <--- ADD THIS LINE FOR TESTING
     setSelectedBook(bookData);
     setShowLinkModal(true);
 };
