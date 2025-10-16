@@ -530,13 +530,10 @@ const topThreeBooks = displayBooks.slice(0, 3);
                               xmlns="http://www.w3.org/2000/svg"
                               xmlnsXlink="http://www.w3.org/1999/xlink"
                               version="1.1"
-                              width="256"
-                              height="256"
                               xmlSpace="preserve"
                               viewBox="0 0 90 90"
                               className="w-16 h-6"
-                              fill="white"
-                            >
+                              >
                               <g
                                 style={{
                                   stroke: "none",
