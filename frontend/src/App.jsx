@@ -732,10 +732,11 @@ const topThreeBooks = displayBooks.slice(0, 3);
               <h3 className="text-xl font-bold text-gray-800 mb-4">Other Books Found</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {books.slice(3).map((book, index) => (
-                  onClick={() => setShowLinkModal(true)}
                    <div className={`flex gap-3 p-4 border rounded-lg hover:border-indigo-300 transition-colors ${
                     book.inReadingList ? 'bg-emerald-50 border-emerald-300 ring-2 ring-emerald-200' : 'border-gray-200'
-                  }`}>
+                  }`}
+                  onClick={() => setShowLinkModal(true)}
+                   >
                     <div className="flex-1">
                       <div className="flex items-start justify-between">
                         <h4 className="font-semibold text-gray-800">{book.title}</h4>
