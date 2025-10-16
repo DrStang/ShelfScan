@@ -119,7 +119,7 @@ const LinkModal = ({ show, onClose, items = [] }) => {
                                                             strokeLinecap: "butt",
                                                             strokeLinejoin: "miter",
                                                             strokeMiterlimit: 10,
-                                                            fill: rgb(34, 34, 34),
+                                                            fill: "rgb(34, 34, 34)",
                                                             fillRule: "nonzero",
                                                             opacity: 1,
                                                         }}
