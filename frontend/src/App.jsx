@@ -6,7 +6,7 @@ import ReadingList from './ReadingList';
 import { supabase } from './supabaseClient';
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import LinkModal from './LinkModal';
-import amazonImage from './amazon-logo-rounded-square-button-19630.png';
+import amazonImage from './amazon-logo-rounded-square-button-19630 (2).png';
 
 function App() {
   const [image, setImage] = useState(null);
@@ -538,7 +538,7 @@ const topThreeBooks = displayBooks.slice(0, 3);
                             rel="noopener noreferrer"
                             className="inline-block mt-2"
                           >
-                           <img src={amazonImage} className="w-60 h-60"/>
+                           <img src={amazonImage} className="w-6 h-6"/>
                           </a>
                         {book.infoLink && (
                           <a
