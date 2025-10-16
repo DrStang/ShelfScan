@@ -525,6 +525,7 @@ const topThreeBooks = displayBooks.slice(0, 3);
                             href={book.amazonUrl}
                             target="_blank"
                             rel="noopener noreferrer"
+                            >
                             <svg
                               xmlns="http://www.w3.org/2000/svg"
                               xmlnsXlink="http://www.w3.org/1999/xlink"
@@ -693,9 +694,7 @@ const topThreeBooks = displayBooks.slice(0, 3);
                                   strokeLinecap="round"
                                 />
                               </g>
-                            </svg>
-                                                        
-                          >                        
+                            </svg>                    
                           </a>
                         {book.infoLink && (
                           <a
