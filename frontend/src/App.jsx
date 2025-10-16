@@ -5,6 +5,7 @@ import AuthModal from './AuthModal';
 import ReadingList from './ReadingList';
 import { supabase } from './supabaseClient';
 import { SpeedInsights } from "@vercel/speed-insights/react";
+import LinkModal from './LinkModal';
 
 function App() {
   const [image, setImage] = useState(null);
@@ -16,10 +17,12 @@ function App() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showReadingList, setShowReadingList] = useState(false);
+  const [showLinkModal, setShowLinkModal] = useState(false);
   const [scanHistory, setScanHistory] = useState([]);
   const [savingScan, setSavingScan] = useState(false);
   const [showOnlyMatches, setShowOnlyMatches] = useState(false);
   const [matchedCount, setMatchedCount] = useState(0);
+  
 
 
   const { user, signOut, loading: authLoading } = useAuth();
