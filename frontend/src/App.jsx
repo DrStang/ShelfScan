@@ -565,7 +565,7 @@ const topThreeBooks = displayBooks.slice(0, 3);
                             rel="noopener noreferrer"
                             className="inline-flex items-center justify-center"
                             >
-                           <img src={googleImage} alt="See on Google Books" className="h-40 w-auto sm:h-44 hover:opacity-80 transition-opacity" />
+                           <img src={googleImage} alt="See on Google Books" className="h-10 w-auto sm:h-12 hover:opacity-80 transition-opacity" />
                             {/* className="inline-flex items-center justify-center px-2 py-1.5 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors font-medium min-h-[36px] text-xs sm:text-sm sm:px-4 sm:py-2"
 
                           >
@@ -579,7 +579,7 @@ const topThreeBooks = displayBooks.slice(0, 3);
                             rel="noopener noreferrer"
                             className="inline-flex items-center justify-center"
                             >
-                           <img src={goodreadsImage} alt="See on Goodreads" className="h-40 w-auto sm:h-44 hover:opacity-80 transition-opacity" />
+                           <img src={goodreadsImage} alt="See on Goodreads" className="h-10 w-auto sm:h-12 hover:opacity-80 transition-opacity" />
                             {/* className="inline-flex items-center justify-center px-2 py-1.5 bg-amber-100 text-amber-800 rounded-lg hover:bg-amber-200 transition-colors font-medium min-h-[36px] text-xs sm:text-sm sm:px-4 sm:py-2"
                             >
                             Goodreads → */}
