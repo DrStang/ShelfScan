@@ -129,6 +129,14 @@ const LinkModal = ({ show, onClose, book }) => {
                 <h2 className="text-2xl font-bold text-gray-800 border-b pb-2 mb-2">
                     External Links for:
                 </h2>
+                <p {book.thumbnail && (
+                    <img
+                        src={book.thumbnail}
+                        alt={book.title}
+                        className="w-32 h-48 object-cover rounded-lg shadow-md"
+                    />
+                )}>
+                    </p>
                 <p className="text-xl font-semibold text-indigo-700">
                     {book.title}
                 </p>
