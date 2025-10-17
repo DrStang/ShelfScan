@@ -184,7 +184,7 @@ function ReadingList({ isOpen, onClose }) {
           {/* Import Section */}
           <div className="mb-6 p-4 bg-indigo-50 rounded-lg">
             <h3 className="text-lg font-semibold text-gray-800 mb-2">
-              Import from Goodreads (last imported on {new Date(scan.created_at).toLocaleDateString()})
+              Import from Goodreads (last imported on {new Date(readingList.created_at).toLocaleDateString()})
             </h3>
             <p className="text-xs text-gray-600 mb-4">
               Due to Goodreads restrictions, your library cannot be directly connected here and must be exported. Note because of this, changes to your library will not be automatically imported here. 
