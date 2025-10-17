@@ -555,6 +555,7 @@ const topThreeBooks = displayBooks.slice(0, 3);
                             <p>...<span onClick={() => openDescriptModal(book)} style="cursor:pointer; color:blue;">More</span></p>
                             
                         </p>
+                          }
                       </div>
 
                       <div className="flex flex-wrap gap-4 items-center justify-start">
