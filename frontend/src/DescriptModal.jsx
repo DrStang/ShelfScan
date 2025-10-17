@@ -37,9 +37,9 @@ const DescriptModal = ({ show, onClose, book }) => {
                 </p>
 
 
-                <p className="text-gray-700 leading-relaxed">
+                <div className="bg-white rounded-xl text-gray-700 leading-relaxed overflow-y-auto">
                     {book.description.replace(/<[^>]*>/g, '').substring()}
-                </p>
+                </div>
 
 
                 {/* Footer */}
