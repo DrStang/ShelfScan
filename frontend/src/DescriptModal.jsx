@@ -37,7 +37,7 @@ const DescriptModal = ({ show, onClose, book }) => {
                 </p>
 
 
-                <p className="text-gray-700 leading-relaxed line-clamp-4">
+                <p className="text-gray-700 leading-relaxed">
                     {book.description.replace(/<[^>]*>/g, '').substring()}
                 </p>
 
