@@ -552,7 +552,7 @@ const topThreeBooks = displayBooks.slice(0, 3);
                           {book.description.replace(/<[^>]*>/g, '').substring(0, 300)}
                           {/*{book.description.length > 300 ? '...' : ''}*/}
                           {book.description.length > 300 && (
-                            <p>...<span onClick={() => openDescriptModal(book)} style="cursor:pointer; color:blue;">More</span></p>}
+                            <p>...<span onClick={() => openDescriptModal(book)} className="text-blue-700">More</span></p>}
                             
                         </p>
                           
