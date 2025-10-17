@@ -553,7 +553,7 @@ const topThreeBooks = displayBooks.slice(0, 3);
                             rel="noopener noreferrer"
                             className="inline-flex items-center justify-center"
                             >
-                           <img src={amazonImage} alt="Buy on Amazon" className="h-36 w-auto sm:h-40 hover:opacity-80 transition-opacity" />
+                           <img src={amazonImage} alt="Buy on Amazon" className="h-40 w-auto sm:h-44 hover:opacity-80 transition-opacity" />
                           
                           </a>
                         {book.infoLink && (
