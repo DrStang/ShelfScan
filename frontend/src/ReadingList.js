@@ -11,6 +11,7 @@ function ReadingList({ isOpen, onClose }) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [stats, setStats] = useState(null);
+  const [lastImportDate, setLastImportDate] = useState(null);
   const { user, session } = useAuth();
 
   const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
@@ -41,6 +42,15 @@ function ReadingList({ isOpen, onClose }) {
       setReadingList(data.books || []);
       setFilteredBooks(data.books || []);
       calculateStats(data.books || []);
+      if (data.books && data.books.length > 0) {
+        const dates = data.books
+        .map(book => book.created_at)
+        .filter(date => date)
+        .sort((a, b) => new Date(b) - new Date(a));
+      if (dates.length > 0) {
+        setLastImportDate(dates[0});
+      }
+      }
     } catch (err) {
       console.error('Error loading reading list:', err);
       setError(err.message);
@@ -184,7 +194,16 @@ function ReadingList({ isOpen, onClose }) {
           {/* Import Section */}
           <div className="mb-6 p-4 bg-indigo-50 rounded-lg">
             <h3 className="text-lg font-semibold text-gray-800 mb-2">
-              Import from Goodreads (last imported on {new Date(readingList.created_at).toLocaleDateString()})
+              Import from Goodreads
+                {lastImportDate && (
+                  <span className="text-sm font-normal text-gray-600 block mt-1">
+                    Last imported: {new Date(lastImportDate).toLocaleDateString()}
+                    {/* Show reminder if import is older than 30 days */}
+                    {new Date() - new Date(lastImportDate) > 14 * 24 * 60 * 60 * 1000 && (
+                      <span className="text-amber-600 ml-2">⚠️ Consider re-importing</span>
+                    )}
+                  </span>
+                )}    
             </h3>
             <p className="text-xs text-gray-600 mb-4">
               Due to Goodreads restrictions, your library cannot be directly connected here and must be exported. Note because of this, changes to your library will not be automatically imported here. 
