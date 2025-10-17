@@ -241,7 +241,7 @@ const topThreeBooks = displayBooks.slice(0, 3);
                       title="History"
                     >
                       <History className="w-4 h-4" />
-                      <span className="hidden lg:inline text-sm">History</span>
+                      <span className="hidden lg:inline text-sm">Scan History</span>
                     </button>
                     
                     {/* Reading List Button */}
@@ -251,7 +251,7 @@ const topThreeBooks = displayBooks.slice(0, 3);
                       title="Reading List"
                     >
                       <BookOpen className="w-4 h-4" />
-                      <span className="hidden lg:inline text-sm">List</span>
+                      <span className="hidden lg:inline text-sm">Reading List</span>
                     </button>
                     
                     {/* User Email - Hidden on mobile */}
@@ -267,7 +267,7 @@ const topThreeBooks = displayBooks.slice(0, 3);
                       title="Sign Out"
                     >
                       <LogOut className="w-4 h-4" />
-                      <span className="hidden lg:inline text-sm">Out</span>
+                      <span className="hidden lg:inline text-sm">Sign Out</span>
                     </button>
                   </>
                 ) : (
@@ -553,7 +553,7 @@ const topThreeBooks = displayBooks.slice(0, 3);
                             rel="noopener noreferrer"
                             className="inline-flex items-center justify-center"
                             >
-                           <img src={amazonImage} alt="Buy on Amazon" className="h-24 w-auto sm:h-28 hover:opacity-80 transition-opacity" />
+                           <img src={amazonImage} alt="Buy on Amazon" className="h-36 w-auto sm:h-40 hover:opacity-80 transition-opacity" />
                           
                           </a>
                         {book.infoLink && (
