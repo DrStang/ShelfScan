@@ -12,10 +12,13 @@ const DescriptModal = ({ show, onClose, book }) => {
             className="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto"
             onClick={onClose}
         >
-            <div
-                className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 relative transform transition-all"
-                onClick={e => e.stopPropagation()}
-            >
+        <div 
+            className="bg-white rounded-xl shadow-2xl max-w-4xl w-full overflow-hidden flex flex-col"
+            style={{ 
+              marginTop: 'max(1rem, env(safe-area-inset-top))',
+              maxHeight: 'calc(100vh - 8rem)'
+                }}
+          >
                 {/* Close Button */}
                 <button
                     onClick={onClose}
