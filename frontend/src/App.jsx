@@ -6,6 +6,7 @@ import ReadingList from './ReadingList';
 import { supabase } from './supabaseClient';
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import LinkModal from './LinkModal';
+import DescriptModal from './DescriptModal'; 
 import amazonImage from './amazon.png';
 import googleImage from './Google_Play_Books_icon_(2023).svg.png';
 import goodreadsImage from './Goodreads_logo_2025.png';
@@ -22,6 +23,7 @@ function App() {
   const [showReadingList, setShowReadingList] = useState(false);
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [selectedBook, setSelectedBook] = useState(null);
+  const [showDescriptModal, setShowDescriptModal] = useState(false); 
   const [scanHistory, setScanHistory] = useState([]);
   const [savingScan, setSavingScan] = useState(false);
   const [showOnlyMatches, setShowOnlyMatches] = useState(false);
@@ -212,6 +214,10 @@ function App() {
     console.log("Opening modal for book:", bookData); // <--- ADD THIS LINE FOR TESTING
     setSelectedBook(bookData);
     setShowLinkModal(true);
+};
+  const openDescriptModal = (bookData) => {
+    setSelectedBook(bookData);
+    setShowDescriptModal(true);
 };
 
 const topThreeBooks = displayBooks.slice(0, 3);
@@ -544,7 +550,10 @@ const topThreeBooks = displayBooks.slice(0, 3);
                       <div className="mb-4">
                         <p className="text-gray-700 leading-relaxed line-clamp-4">
                           {book.description.replace(/<[^>]*>/g, '').substring(0, 300)}
-                          {book.description.length > 300 ? '...' : ''}
+                          {/*{book.description.length > 300 ? '...' : ''}*/}
+                          {book.description.length > 300 && (
+                            <p>...<span onClick={() => openDescriptModal(book)} style="cursor:pointer; color:blue;">More</span></p>
+                            
                         </p>
                       </div>
 
@@ -729,6 +738,11 @@ const topThreeBooks = displayBooks.slice(0, 3);
       <LinkModal 
         show={showLinkModal}
         onClose={() => setShowLinkModal(false)}
+        book={selectedBook}
+        />
+      <DescriptModal 
+        show={showDescriptModal}
+        onClose={() => setShowDescriptModal(false)}
         book={selectedBook}
         />
     </>
