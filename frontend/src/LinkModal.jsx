@@ -113,7 +113,7 @@ const LinkModal = ({ show, onClose, book }) => {
             onClick={onClose}
         >
             <div
-                className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 relative transform transition-all"
+                className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 relative transform transition-all overflow-y-auto"
                 onClick={e => e.stopPropagation()}
             >
                 {/* Close Button */}
