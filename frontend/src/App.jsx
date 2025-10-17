@@ -548,7 +548,7 @@ const topThreeBooks = displayBooks.slice(0, 3);
                         </p>
                       </div>
 
-                      <div className="flex flex-wrap gap-2 items-center justify-start">
+                      <div className="flex flex-wrap gap-4 items-center justify-start">
                           <a
                             href={book.amazonUrl}
                             target="_blank"
