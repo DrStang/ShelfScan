@@ -5,6 +5,7 @@ import AuthModal from './AuthModal';
 import ReadingList from './ReadingList';
 import { supabase } from './supabaseClient';
 import { SpeedInsights } from "@vercel/speed-insights/react";
+import { Analytics } from "@vercel/analytics/react";
 import LinkModal from './LinkModal';
 import DescriptModal from './DescriptModal'; 
 import amazonImage from './amazon.png';
@@ -732,6 +733,7 @@ const topThreeBooks = displayBooks.slice(0, 3);
       </footer>
       
       <SpeedInsights />
+      <Analytics />
 
       {/* Modals */}
       <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
