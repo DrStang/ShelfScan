@@ -8,7 +8,7 @@ import { SpeedInsights } from "@vercel/speed-insights/react";
 import LinkModal from './LinkModal';
 import amazonImage from './amazon-logo-rounded-square-button-19630 (2).png';
 import googleImage from './Google_Play_Books_icon_(2023).svg.png';
-import goodreadsImage from './Goodreadslogo.svg';
+import goodreadsImage from './Goodreads_logo_2025.png';
 
 function App() {
   const [image, setImage] = useState(null);
