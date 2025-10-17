@@ -48,7 +48,7 @@ function ReadingList({ isOpen, onClose }) {
         .filter(date => date)
         .sort((a, b) => new Date(b) - new Date(a));
       if (dates.length > 0) {
-        setLastImportDate(dates[0});
+        setLastImportDate(dates[0]);
       }
       }
     } catch (err) {
