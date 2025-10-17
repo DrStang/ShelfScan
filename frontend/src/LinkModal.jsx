@@ -135,7 +135,7 @@ const LinkModal = ({ show, onClose, book }) => {
                         alt={book.title}
                         className="w-16 h-24 object-cover rounded-lg shadow-md"
                     />
-                )}>
+                )}
                     
                 <p className="text-xl font-semibold text-indigo-700">
                     {book.title}
@@ -173,6 +173,12 @@ const LinkModal = ({ show, onClose, book }) => {
                             </div>
                         )
                     ))}
+                </div>
+                <div className="mb-4">
+                   <p className="text-gray-700 leading-relaxed line-clamp-4">
+                    {book.description.replace(/<[^>]*>/g, '').substring(0, 300)}
+                    {book.description.length > 300 ? '...' : ''}
+                    </p>
                 </div>
 
                 {/* Footer */}
