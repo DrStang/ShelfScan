@@ -548,14 +548,14 @@ const topThreeBooks = displayBooks.slice(0, 3);
                       )}
 
                       <div className="mb-4">
-                        <p className="text-gray-700 leading-relaxed line-clamp-4">
+                        <p className="text-gray-700 leading-relaxed">
                           {book.description.replace(/<[^>]*>/g, '').substring(0, 300)}
                           {book.description.length > 300 && (
                               <>
                                 ...{' '}
                                 <button
                                   onClick={() => openDescriptModal(book)}
-                                  className="text-blue-600 hover:text-blue-800 underline font-medium cursor-pointer touch-manipulation"
+                                  className="min-h-[44px] text-blue-600 hover:text-blue-800 underline font-medium cursor-pointer touch-manipulation flex items-center"
                                 >
                                   More
                                 </button>
