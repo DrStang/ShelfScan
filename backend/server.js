@@ -76,7 +76,14 @@ let isRedisReady = false;
 // Middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(cors({
-  origin: [process.env.FRONTEND_URL || 'http://localhost:3000', 'https://shelfscan.xyz'],
+  origin: [
+    process.env.FRONTEND_URL || 'http://localhost:3000', 
+    'https://shelfscan.xyz',
+    'capacitor://localhost',
+    'ionic://localhost',
+    'http://localhost',
+    'https://localhost'
+    ],
   credentials: true
 }));
 
