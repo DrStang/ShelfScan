@@ -1,7 +1,7 @@
 // server.js - Backend API for Book Spine Scanner
 const express = require('express');
 const cors = require('cors');
-const rateLimit = require('express-rate-limit');
+const rateLimit = require('express-rate-limit'); 
 const redis = require('redis');
 const fetch = require('node-fetch');
 const { createClient } = require('@supabase/supabase-js');
