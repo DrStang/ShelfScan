@@ -7,8 +7,7 @@ const fetch = require('node-fetch');
 const { createClient } = require('@supabase/supabase-js');
 const Papa = require('papaparse');
 const multer = require('multer');
-const axios = require('axios');
-const cheerio = require('cheerio');
+
 require('dotenv').config();
 
 const app = express();
