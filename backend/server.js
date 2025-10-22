@@ -83,7 +83,6 @@ app.use(cors({
     'ionic://localhost',
     'http://localhost',
     'https://localhost',
-    'http://localhost:3000'
     ],
   credentials: true
 }));
