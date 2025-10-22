@@ -8,6 +8,7 @@ const { createClient } = require('@supabase/supabase-js');
 const Papa = require('papaparse');
 const multer = require('multer');
 const axios = require('axios');
+const cheerio = require('cheerio');
 require('dotenv').config();
 
 const app = express();
@@ -263,17 +264,15 @@ function isbn13to10(isbn13) {
   
   return base + checksum;
 }
-async function getAmazonRatings(isbn) { 
+function getAmazonRatings(isbn) { 
   const url = `https://www.amazon.com/dp/${isbn}`; 
   const response = await axios.get(url); 
   
   if (response.status === 200 && response.data.includes('')) { 
-    const ratingsElement = document.createElement('div'); 
-    ratingsElement.innerHTML = response.data; 
-    
-    const ratingEl = ratingsElement.querySelector('.a-size-medium.a-spacing-none.rating-hidden'); 
-    if (ratingEl) { 
-      return parseFloat(ratingEl.textContent); 
+    const cheerio.load(response.data); 
+    const ratingEl = $('.a-size-medium.a-spacing-none.rating-hidden'); 
+    if (ratingEl.length >0 ) { 
+      return parseFloat(ratingEl.first().text()); 
                   } else { 
       throw new Error('Failed to retrieve book rating from Amazon'); } 
                 
