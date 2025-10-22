@@ -82,7 +82,8 @@ app.use(cors({
     'capacitor://localhost',
     'ionic://localhost',
     'http://localhost',
-    'https://localhost'
+    'https://localhost',
+    'http://localhost:3000'
     ],
   credentials: true
 }));
