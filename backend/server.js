@@ -7,6 +7,7 @@ const fetch = require('node-fetch');
 const { createClient } = require('@supabase/supabase-js');
 const Papa = require('papaparse');
 const multer = require('multer');
+const axios = require('axios');
 require('dotenv').config();
 
 const app = express();
@@ -262,6 +263,24 @@ function isbn13to10(isbn13) {
   
   return base + checksum;
 }
+async function getAmazonRatings(isbn) { 
+  const url = `https://www.amazon.com/dp/${isbn}`; 
+  const response = await axios.get(url); 
+  
+  if (response.status === 200 && response.data.includes('')) { 
+    const ratingsElement = document.createElement('div'); 
+    ratingsElement.innerHTML = response.data; 
+    
+    const ratingEl = ratingsElement.querySelector('.a-size-medium.a-spacing-none.rating-hidden'); 
+    if (ratingEl) { 
+      return parseFloat(ratingEl.textContent); 
+                  } else { 
+      throw new Error('Failed to retrieve book rating from Amazon'); } 
+                
+    } else { 
+      throw new Error(`Invalid response status: ${response.status}`); } 
+} 
+console.log (`getAmazonRatings`)
 
 // Helper function to merge book data from multiple sources
 function mergeBookData(googleBook, openLibBook, originalTitle, originalAuthor) {
