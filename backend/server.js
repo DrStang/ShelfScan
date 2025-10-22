@@ -264,22 +264,6 @@ function isbn13to10(isbn13) {
   
   return base + checksum;
 }
-async function getAmazonRatings(isbn) { 
-  const url = `https://www.amazon.com/dp/${isbn}`; 
-  const response = await axios.get(url); 
-  
-  if (response.status === 200 && response.data.includes('')) { 
-    const cheerio.load(response.data); 
-    const ratingEl = $('.a-size-medium.a-spacing-none.rating-hidden'); 
-    if (ratingEl.length >0 ) { 
-      return parseFloat(ratingEl.first().text()); 
-                  } else { 
-      throw new Error('Failed to retrieve book rating from Amazon'); } 
-                
-    } else { 
-      throw new Error(`Invalid response status: ${response.status}`); } 
-} 
-console.log (`getAmazonRatings`)
 
 // Helper function to merge book data from multiple sources
 function mergeBookData(googleBook, openLibBook, originalTitle, originalAuthor) {
