@@ -264,7 +264,7 @@ function isbn13to10(isbn13) {
   
   return base + checksum;
 }
-function getAmazonRatings(isbn) { 
+async function getAmazonRatings(isbn) { 
   const url = `https://www.amazon.com/dp/${isbn}`; 
   const response = await axios.get(url); 
   
