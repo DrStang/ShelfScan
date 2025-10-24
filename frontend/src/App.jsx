@@ -767,7 +767,7 @@ const topThreeBooks = displayBooks.slice(0, 3);
         book={selectedBook}
         />
       <PwChangeModal
-        show={showPwChangeModal}
+        isOpen={showPwChangeModal}
         onClose={() => setShowPwChangeModal(false)}
         />
     </>
