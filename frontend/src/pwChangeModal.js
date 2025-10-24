@@ -3,7 +3,6 @@ import { X, Mail, Lock, Loader2 } from 'lucide-react';
 import { useAuth } from './AuthContext';
 
 export default function pwChangeModal({ isOpen, onClose }) {
-  const [changePassword, setChangePassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
