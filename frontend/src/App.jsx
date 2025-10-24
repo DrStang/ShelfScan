@@ -29,6 +29,7 @@ function App() {
   const [savingScan, setSavingScan] = useState(false);
   const [showOnlyMatches, setShowOnlyMatches] = useState(false);
   const [matchedCount, setMatchedCount] = useState(0);
+  const [showpwChangeModal, setShowPwChangeModal] = useState(false); 
   
 
 
@@ -288,6 +289,13 @@ const topThreeBooks = displayBooks.slice(0, 3);
                     <span className="text-sm">Sign In</span>
                   </button>
                 )}
+                    <button
+                    onClick={() => setShowChangePwModal(true)}
+                    className="px-3 py-2 sm:px-4 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-1.5"
+                  >
+                    <User className="w-4 h-4" />
+                    <span className="text-sm">Change Password</span>
+                  </button>
               </div>
             </div>
           </div>
@@ -754,6 +762,10 @@ const topThreeBooks = displayBooks.slice(0, 3);
         show={showDescriptModal}
         onClose={() => setShowDescriptModal(false)}
         book={selectedBook}
+        />
+      <ChangePwModal
+        show={showChangePwModal}
+        onClose={() => setShowChangePwModal(false)}
         />
     </>
   );
