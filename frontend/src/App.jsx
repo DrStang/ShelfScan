@@ -10,6 +10,7 @@ import DescriptModal from './DescriptModal';
 import amazonImage from './amazon.png';
 import googleImage from './Google_Play_Books_icon_(2023).svg.png';
 import goodreadsImage from './Goodreads_logo_2025.png';
+import pwChangeModal from './pwChangeModal';
 
 function App() {
   const [image, setImage] = useState(null);
