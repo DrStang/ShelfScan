@@ -10,7 +10,7 @@ import DescriptModal from './DescriptModal';
 import amazonImage from './amazon.png';
 import googleImage from './Google_Play_Books_icon_(2023).svg.png';
 import goodreadsImage from './Goodreads_logo_2025.png';
-import pwChangeModal from './pwChangeModal';
+import PwChangeModal from './PwChangeModal';
 
 function App() {
   const [image, setImage] = useState(null);
@@ -270,6 +270,16 @@ const topThreeBooks = displayBooks.slice(0, 3);
                       <span className="text-sm text-gray-700 max-w-[120px] truncate">{user.email}</span>
                     </div>
                     
+                    {/* Change Password Button */}
+                    <button
+                      onClick={() => setShowPwChangeModal(true)}
+                      className="p-2 sm:px-3 sm:py-2 lg:px-4 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors flex items-center gap-1.5"
+                      title="Change Password"
+                    >
+                      <User className="w-4 h-4" />
+                      <span className="hidden lg:inline text-sm">Change Password</span>
+                    </button>
+                    
                     {/* Sign Out Button */}
                     <button
                       onClick={handleSignOut}
@@ -289,13 +299,6 @@ const topThreeBooks = displayBooks.slice(0, 3);
                     <span className="text-sm">Sign In</span>
                   </button>
                 )}
-                    <button
-                    onClick={() => setShowPwChangeModal(true)}
-                    className="px-3 py-2 sm:px-4 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-1.5"
-                  >
-                    <User className="w-4 h-4" />
-                    <span className="text-sm">Change Password</span>
-                  </button>
               </div>
             </div>
           </div>
@@ -763,7 +766,7 @@ const topThreeBooks = displayBooks.slice(0, 3);
         onClose={() => setShowDescriptModal(false)}
         book={selectedBook}
         />
-      <pwChangeModal
+      <PwChangeModal
         show={showPwChangeModal}
         onClose={() => setShowPwChangeModal(false)}
         />
