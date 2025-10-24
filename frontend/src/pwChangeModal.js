@@ -17,23 +17,6 @@ export default function pwChangeModal({ isOpen, onClose }) {
         setSuccess('');
         setLoading(true);
 
-        try {
-            if (isSignUp) {
-                const { error } = await signUp(email, password);
-                if (error) throw error;
-                setSuccess('Account created! Check your email to verify.');
-            } else {
-                const { error } = await signIn(email, password);
-                if (error) throw error;
-                setSuccess('Signed in successfully!');
-                setTimeout(() => onClose(), 1000);
-            }
-        } catch (err) {
-            setError(err.message || 'An error occurred');
-        } finally {
-            setLoading(false);
-        }
-    };
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -83,9 +66,9 @@ export default function pwChangeModal({ isOpen, onClose }) {
                                 {success}
                             </div>
                         )}
-                    </div>    
+                    </div>
 
-                     
+
                 </form>
 
             </div>
