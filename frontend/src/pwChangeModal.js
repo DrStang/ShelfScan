@@ -46,7 +46,7 @@ export default function pwChangeModal({ isOpen, onClose }) {
         </button>
 
         <h2 className="text-3xl font-bold text-gray-800 mb-2">
-          {Change your password}
+          Change your password
         </h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
