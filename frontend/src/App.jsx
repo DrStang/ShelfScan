@@ -29,7 +29,7 @@ function App() {
   const [savingScan, setSavingScan] = useState(false);
   const [showOnlyMatches, setShowOnlyMatches] = useState(false);
   const [matchedCount, setMatchedCount] = useState(0);
-  const [showpwChangeModal, setShowPwChangeModal] = useState(false); 
+  const [showPwChangeModal, setShowPwChangeModal] = useState(false); 
   
 
 
@@ -290,7 +290,7 @@ const topThreeBooks = displayBooks.slice(0, 3);
                   </button>
                 )}
                     <button
-                    onClick={() => setShowChangePwModal(true)}
+                    onClick={() => setShowPwChangeModal(true)}
                     className="px-3 py-2 sm:px-4 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-1.5"
                   >
                     <User className="w-4 h-4" />
@@ -763,9 +763,9 @@ const topThreeBooks = displayBooks.slice(0, 3);
         onClose={() => setShowDescriptModal(false)}
         book={selectedBook}
         />
-      <ChangePwModal
-        show={showChangePwModal}
-        onClose={() => setShowChangePwModal(false)}
+      <pwChangeModal
+        show={showPwChangeModal}
+        onClose={() => setShowPwChangeModal(false)}
         />
     </>
   );
