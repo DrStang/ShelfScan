@@ -48,7 +48,7 @@ export const AuthProvider = ({ children }) => {
         });
         return { data, error };
     };
-    const changePassword = async () => {
+    const changePassword = async (password) => {
         const {data, error} = await supabase.auth.updateUser({
             password,
         });
