@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Redirecting to Shelf Scan...</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .container {
+            text-align: center;
+            padding: 2rem;
+            max-width: 500px;
+        }
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 2rem auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .button {
+            display: inline-block;
+            margin-top: 1.5rem;
+            padding: 12px 24px;
+            background: white;
+            color: #667eea;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: transform 0.2s;
+        }
+        .button:hover {
+            transform: scale(1.05);
+        }
+        .instructions {
+            margin-top: 2rem;
+            font-size: 0.9rem;
+            opacity: 0.9;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎉 Email Verified!</h1>
+        <div class="spinner"></div>
+        <p id="status">Opening Shelf Scan app...</p>
+        
+        <div id="fallback" style="display: none;">
+            <p>Having trouble?</p>
+            <a href="#" id="openApp" class="button">Open App</a>
+            <div class="instructions">
+                <p><strong>App not opening?</strong></p>
+                <p>Make sure the Shelf Scan app is installed on this device.</p>
+                <p>If the app doesn't open automatically, tap the button above.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Get the hash fragment from the URL (contains auth tokens)
+        const hash = window.location.hash;
+        
+        console.log('Auth callback page loaded');
+        console.log('Hash:', hash);
+
+        // Build the deep link URL
+        const deepLink = `shelfscan://auth/callback${hash}`;
+        
+        console.log('Deep link:', deepLink);
+
+        // Function to attempt opening the app
+        function openApp() {
+            console.log('Attempting to open app...');
+            
+            // Try to open the app
+            window.location.href = deepLink;
+            
+            // After a short delay, show the fallback options
+            setTimeout(() => {
+                document.getElementById('status').textContent = 'Redirecting...';
+                document.getElementById('fallback').style.display = 'block';
+            }, 2000);
+        }
+
+        // Set up the manual open button
+        document.getElementById('openApp').addEventListener('click', (e) => {
+            e.preventDefault();
+            window.location.href = deepLink;
+        });
+
+        // Automatically try to open the app on page load
+        openApp();
+
+        // iOS-specific: Try using a custom protocol handler
+        if (/iPhone|iPad|iPod/.test(navigator.userAgent)) {
+            console.log('iOS device detected');
+            
+            // For iOS, we need to try opening the app and check if it fails
+            const iframe = document.createElement('iframe');
+            iframe.style.display = 'none';
+            iframe.src = deepLink;
+            document.body.appendChild(iframe);
+            
+            setTimeout(() => {
+                document.body.removeChild(iframe);
+            }, 1000);
+        }
+    </script>
+</body>
+</html>
