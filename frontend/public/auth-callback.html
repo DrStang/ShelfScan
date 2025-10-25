@@ -43,6 +43,9 @@
             border-radius: 8px;
             font-weight: 600;
             transition: transform 0.2s;
+            cursor: pointer;
+            border: none;
+            font-size: 16px;
         }
         .button:hover {
             transform: scale(1.05);
@@ -53,22 +56,38 @@
             opacity: 0.9;
             line-height: 1.6;
         }
+        .debug {
+            margin-top: 2rem;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            font-size: 0.8rem;
+            text-align: left;
+            word-break: break-all;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>🎉 Email Verified!</h1>
-        <div class="spinner"></div>
+        <div class="spinner" id="spinner"></div>
         <p id="status">Opening Shelf Scan app...</p>
         
         <div id="fallback" style="display: none;">
             <p>Having trouble?</p>
-            <a href="#" id="openApp" class="button">Open App</a>
+            <button onclick="openApp()" class="button">Open App Manually</button>
             <div class="instructions">
                 <p><strong>App not opening?</strong></p>
                 <p>Make sure the Shelf Scan app is installed on this device.</p>
-                <p>If the app doesn't open automatically, tap the button above.</p>
+                <p>If you're on a computer, scan this QR code with your phone, or email yourself this link.</p>
             </div>
+        </div>
+
+        <!-- Debug info (remove in production) -->
+        <div id="debug" class="debug" style="display: none;">
+            <strong>Debug Info:</strong><br>
+            Hash: <span id="debugHash"></span><br>
+            Deep Link: <span id="debugLink"></span>
         </div>
     </div>
 
@@ -77,10 +96,16 @@
         const hash = window.location.hash;
         
         console.log('Auth callback page loaded');
+        console.log('Full URL:', window.location.href);
         console.log('Hash:', hash);
+
+        // Show debug info
+        document.getElementById('debugHash').textContent = hash || '(none)';
+        document.getElementById('debug').style.display = 'block';
 
         // Build the deep link URL
         const deepLink = `shelfscan://auth/callback${hash}`;
+        document.getElementById('debugLink').textContent = deepLink;
         
         console.log('Deep link:', deepLink);
 
@@ -88,38 +113,65 @@
         function openApp() {
             console.log('Attempting to open app...');
             
-            // Try to open the app
-            window.location.href = deepLink;
-            
-            // After a short delay, show the fallback options
-            setTimeout(() => {
-                document.getElementById('status').textContent = 'Redirecting...';
-                document.getElementById('fallback').style.display = 'block';
-            }, 2000);
+            try {
+                // Try to open the app
+                window.location.href = deepLink;
+                
+                // Mark as attempted
+                document.getElementById('status').textContent = 'If the app doesn\'t open, tap the button below...';
+                
+            } catch (error) {
+                console.error('Error opening app:', error);
+                document.getElementById('status').textContent = 'Error opening app. Please use the button below.';
+            }
         }
 
-        // Set up the manual open button
-        document.getElementById('openApp').addEventListener('click', (e) => {
-            e.preventDefault();
-            window.location.href = deepLink;
-        });
+        // Show fallback after delay
+        function showFallback() {
+            document.getElementById('spinner').style.display = 'none';
+            document.getElementById('fallback').style.display = 'block';
+        }
 
         // Automatically try to open the app on page load
-        openApp();
+        setTimeout(() => {
+            openApp();
+        }, 500);
 
-        // iOS-specific: Try using a custom protocol handler
+        // Show fallback options after 3 seconds
+        setTimeout(() => {
+            showFallback();
+        }, 3000);
+
+        // iOS-specific: Create hidden iframe to trigger app
         if (/iPhone|iPad|iPod/.test(navigator.userAgent)) {
-            console.log('iOS device detected');
-            
-            // For iOS, we need to try opening the app and check if it fails
-            const iframe = document.createElement('iframe');
-            iframe.style.display = 'none';
-            iframe.src = deepLink;
-            document.body.appendChild(iframe);
+            console.log('iOS device detected - using iframe method');
             
             setTimeout(() => {
-                document.body.removeChild(iframe);
-            }, 1000);
+                const iframe = document.createElement('iframe');
+                iframe.style.display = 'none';
+                iframe.src = deepLink;
+                document.body.appendChild(iframe);
+                
+                setTimeout(() => {
+                    document.body.removeChild(iframe);
+                }, 2000);
+            }, 100);
+        }
+
+        // Android-specific: Try intent URL as fallback
+        if (/Android/.test(navigator.userAgent)) {
+            console.log('Android device detected');
+            
+            // Android can also use intent URLs as fallback
+            // Format: intent://auth/callback#tokens...#Intent;scheme=shelfscan;package=com.shelfscan.app;end
+            setTimeout(() => {
+                const intentUrl = `intent://auth/callback${hash}#Intent;scheme=shelfscan;package=com.shelfscan.app;end`;
+                console.log('Trying Android intent:', intentUrl);
+                
+                const link = document.createElement('a');
+                link.href = intentUrl;
+                link.click();
+            }, 1500);
         }
     </script>
 </body>
