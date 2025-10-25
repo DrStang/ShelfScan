@@ -25,6 +25,8 @@ export default function AuthModal({ isOpen, onClose }) {
         const { error } = await signUp(email, password);
         if (error) throw error;
         setSuccess('Account created! Check your email to verify.');
+        setTimeout(() => {onClose();}, 1000);
+
       } else {
         const { error } = await signIn(email, password);
         if (error) throw error;
