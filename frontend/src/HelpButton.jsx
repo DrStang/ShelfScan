@@ -153,10 +153,6 @@ const HelpButton = () => {
                                         <p className="text-gray-600">Retake with better lighting and fewer books (5-10 max)</p>
                                     </div>
                                     <div>
-                                        <p className="font-semibold text-gray-800">"Check your network connection"</p>
-                                        <p className="text-gray-600">Make sure you're connected to WiFi or cellular data</p>
-                                    </div>
-                                    <div>
                                         <p className="font-semibold text-gray-800">"Too many scans"</p>
                                         <p className="text-gray-600">Wait 3-5 minutes before trying again</p>
                                     </div>
