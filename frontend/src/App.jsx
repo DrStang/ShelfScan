@@ -726,7 +726,7 @@ const topThreeBooks = displayBooks.slice(0, 3);
                   href="mailto:admin@shelfscan.xyz" 
                   className="text-xs text-indigo-600 hover:text-indigo-800 hover:underline"
                 >
-                  hello@bookspinescanner.com
+                  admin@shelfscan.xyz
                 </a>
               </div>
             </div>
