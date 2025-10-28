@@ -11,6 +11,8 @@ import amazonImage from './amazon.png';
 import googleImage from './Google_Play_Books_icon_(2023).svg.png';
 import goodreadsImage from './Goodreads_logo_2025.png';
 import PwChangeModal from './PwChangeModal';
+import HelpButton from "./HelpButton";
+
 
 function App() {
   const [image, setImage] = useState(null);
@@ -711,12 +713,6 @@ const topThreeBooks = displayBooks.slice(0, 3);
                   >
                     Amazon Associates Policy
                   </a>
-                  <a 
-                    href="/privacy" 
-                    className="block text-xs text-indigo-600 hover:text-indigo-800 hover:underline"
-                  >
-                    Privacy Policy
-                  </a>
                 </div>
               </div>
 
@@ -727,7 +723,7 @@ const topThreeBooks = displayBooks.slice(0, 3);
                   Questions or feedback?
                 </p>
                 <a 
-                  href="mailto:hello@bookspinescanner.com" 
+                  href="mailto:admin@shelfscan.xyz" 
                   className="text-xs text-indigo-600 hover:text-indigo-800 hover:underline"
                 >
                   hello@bookspinescanner.com
@@ -770,6 +766,7 @@ const topThreeBooks = displayBooks.slice(0, 3);
         isOpen={showPwChangeModal}
         onClose={() => setShowPwChangeModal(false)}
         />
+      <HelpButton />
     </>
   );
 }
