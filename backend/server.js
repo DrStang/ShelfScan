@@ -19,7 +19,13 @@ app.set('trust proxy', 1);
 // Initialize Supabase client
 const supabase = createClient(
   process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+  {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false  
+      }
+   }  
 );
 
 // Configure multer for file uploads (in-memory storage)
@@ -770,6 +776,195 @@ app.delete('/api/reading-list', async (req, res) => {
     res.status(500).json({ error: 'An unexpected error occurred' });
   }
 });
+app.delete('/api/delete-account', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    
+    if (authError || !user) {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
+
+    console.log(`🗑️  Account deletion requested for user: ${user.id} (${user.email})`);
+
+    // Step 1: Delete user's scans (including image URLs from storage if applicable)
+    const { data: scans, error: fetchScansError } = await supabase
+      .from('scans')
+      .select('image_url')
+      .eq('user_id', user.id);
+
+    if (fetchScansError) {
+      console.error('Error fetching scans for deletion:', fetchScansError);
+    }
+
+    // Delete images from storage if they exist
+    if (scans && scans.length > 0) {
+      const imageUrls = scans
+        .map(scan => scan.image_url)
+        .filter(url => url && url.includes('supabase'));
+
+      for (const imageUrl of imageUrls) {
+        try {
+          // Extract the file path from the URL
+          const urlParts = imageUrl.split('/storage/v1/object/public/');
+          if (urlParts.length > 1) {
+            const filePath = urlParts[1];
+            const { error: deleteFileError } = await supabase.storage
+              .from('scan-images')
+              .remove([filePath]);
+            
+            if (deleteFileError) {
+              console.error('Error deleting image:', deleteFileError);
+            }
+          }
+        } catch (err) {
+          console.error('Error processing image deletion:', err);
+        }
+      }
+    }
+
+    // Delete scans from database (CASCADE will handle this, but being explicit)
+    const { error: deleteScansError } = await supabase
+      .from('scans')
+      .delete()
+      .eq('user_id', user.id);
+
+    if (deleteScansError) {
+      console.error('Error deleting scans:', deleteScansError);
+      return res.status(500).json({ error: 'Failed to delete scan history' });
+    }
+
+    // Step 2: Delete user's reading list
+    const { error: deleteReadingListError } = await supabase
+      .from('reading_list')
+      .delete()
+      .eq('user_id', user.id);
+
+    if (deleteReadingListError) {
+      console.error('Error deleting reading list:', deleteReadingListError);
+      return res.status(500).json({ error: 'Failed to delete reading list' });
+    }
+
+    // Step 3: Delete the user account from Supabase Auth
+    // Note: This requires admin privileges, so we'll use the service role
+    const { error: deleteUserError } = await supabase.auth.admin.deleteUser(user.id);
+
+    if (deleteUserError) {
+      console.error('Error deleting user account:', deleteUserError);
+      return res.status(500).json({ error: 'Failed to delete account' });
+    }
+
+    console.log(`✅ Account successfully deleted for user: ${user.id} (${user.email})`);
+
+    res.json({
+      success: true,
+      message: 'Account and all associated data have been successfully deleted'
+    });
+
+  } catch (error) {
+    console.error('Account deletion error:', error);
+    res.status(500).json({ 
+      error: 'An unexpected error occurred while deleting the account',
+      details: error.message 
+    });
+  }
+});
+app.delete('/api/scans/:scanId', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    
+    if (authError || !user) {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
+
+    const { scanId } = req.params;
+
+    if (!scanId) {
+      return res.status(400).json({ error: 'Scan ID is required' });
+    }
+
+    console.log(`🗑️  Deleting scan ${scanId} for user ${user.id}`);
+
+    // First, get the scan to check ownership and get image URL
+    const { data: scan, error: fetchError } = await supabase
+      .from('scans')
+      .select('image_url, user_id')
+      .eq('id', scanId)
+      .single();
+
+    if (fetchError) {
+      console.error('Error fetching scan:', fetchError);
+      return res.status(404).json({ error: 'Scan not found' });
+    }
+
+    // Verify the scan belongs to the requesting user
+    if (scan.user_id !== user.id) {
+      return res.status(403).json({ error: 'Forbidden: You can only delete your own scans' });
+    }
+
+    // Delete the image from storage if it exists
+    if (scan.image_url && scan.image_url.includes('supabase')) {
+      try {
+        const urlParts = scan.image_url.split('/storage/v1/object/public/');
+        if (urlParts.length > 1) {
+          const filePath = urlParts[1];
+          const { error: deleteFileError } = await supabase.storage
+            .from('scan-images')
+            .remove([filePath]);
+          
+          if (deleteFileError) {
+            console.error('Error deleting scan image:', deleteFileError);
+            // Continue with scan deletion even if image deletion fails
+          } else {
+            console.log(`✅ Image deleted: ${filePath}`);
+          }
+        }
+      } catch (err) {
+        console.error('Error processing image deletion:', err);
+        // Continue with scan deletion even if image deletion fails
+      }
+    }
+
+    // Delete the scan from database
+    const { error: deleteScanError } = await supabase
+      .from('scans')
+      .delete()
+      .eq('id', scanId)
+      .eq('user_id', user.id); // Extra safety check
+
+    if (deleteScanError) {
+      console.error('Error deleting scan:', deleteScanError);
+      return res.status(500).json({ error: 'Failed to delete scan' });
+    }
+
+    console.log(`✅ Scan ${scanId} successfully deleted`);
+
+    res.json({
+      success: true,
+      message: 'Scan deleted successfully'
+    });
+
+  } catch (error) {
+    console.error('Delete scan error:', error);
+    res.status(500).json({ 
+      error: 'An unexpected error occurred',
+      details: error.message 
+    });
+  }
+});
+
+
 
 // Error handling middleware
 app.use((err, req, res, next) => {
