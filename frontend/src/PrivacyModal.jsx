@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Globe, Star, FileText } from 'lucide-react';
+import { X } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 const PrivacyModal = ({ isOpen, onClose}) => {
     if (!isOpen) return null;
@@ -194,7 +194,7 @@ Your continued use of the App after changes constitutes acceptance of the update
    - All your data (scan history, reading list, account info) will be permanently deleted within 30 days
 
 4. **Request Data Deletion via Email:**
-   - Email us at: [YOUR_SUPPORT_EMAIL@example.com]
+   - Email us at: admin@shelfscan.xyz
    - Include your account email address
    - We will delete your data within 30 days
 
@@ -240,6 +240,10 @@ This Privacy Policy complies with:
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div
                 className="bg-white rounded-xl shadow-2xl max-w-4xl w-full overflow-y-auto flex flex-col"
+                style={{
+                    marginTop: 'max(1rem, env(safe-area-inset-top))',
+                    maxHeight: 'calc(100vh - 8rem)'
+                }}
             >
                 <ReactMarkdown>{markdownText}</ReactMarkdown>
 
