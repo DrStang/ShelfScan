@@ -702,7 +702,161 @@ app.post('/api/import-goodreads', upload.single('file'), async (req, res) => {
     });
   }
 });
+app.post('/api/import-goodreads-url', async(req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
 
+    const token = authHeader.split(' ')[1];
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+
+    if (authError || !user) {
+      return res.status(401).json({ error: 'Invalid Token' });
+    }
+
+    const { url } = req.body;
+
+    if (!url) {
+      return res.status(400).json({ error: 'No URL provided' });
+    }
+
+    if (!url.includes('goodreads.com')){
+      return res.status(400).json({ error: 'Invalid Goodreads URL' });
+    }
+    console.log(`Fetching Goodreads CSV from URL for user: ${user.id}`);
+
+    let csvText;
+    try {
+      const response = await fetch (url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)
+        }
+      });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch CSV: ${response.status} ${response.statusText}`);
+      
+    csvText = await response.text();
+  } catch (fetchError) {
+    console.error('Error fetching CSV:' , fetchError);
+    return res.status(400).json({
+      error: 'Failed to fetch CSV from URL. Make sure the link is correct and accessible.',
+      details: fetchError.message
+    });
+  }
+  if (!csvText || csvText.length < 100) {
+    return res.status(400).json({
+      error: 'Invalid CSV content. Please make sure you copied the correct export link.' 
+    });
+  }
+
+  const parseResult = Papa.parse(csvText, {
+    header: true,
+    skipEmptyLines: true,
+    transformHeader: (header) => header.trim()
+  });
+
+  if (parseResult.errors.length > 0) {  
+    console.error('CSV parse errors:', parseResult.errors);
+      return res.status(400).json({ 
+        error: 'Failed to parse CSV', 
+        details: parseResult.errors[0].message 
+      });
+    }
+
+    const books = parseResult.data;
+    console.log(`Parsed ${books.length} books from CSV`);
+
+    if (books.length === 0) {
+      return res.status(400).json({ 
+        error: 'No books found in CSV. Please check the export link.' 
+      });
+    }
+
+    // Clear existing reading list for this user
+    const { error: deleteError } = await supabase
+      .from('reading_list')
+      .delete()
+      .eq('user_id', user.id);
+
+    if (deleteError) {
+      console.error('Error clearing reading list:', deleteError);
+      return res.status(500).json({ error: 'Failed to clear existing reading list' });
+    }
+
+    // Transform and insert books (same logic as file upload)
+    const booksToInsert = books
+      .filter(book => book.Title && book.Title.trim())
+      .map(book => ({
+        user_id: user.id,
+        title: book.Title?.trim() || '',
+        author: book.Author?.trim() || null,
+        isbn: book.ISBN?.replace(/[="]/g, '').trim() || null,
+        isbn13: book.ISBN13?.replace(/[="]/g, '').trim() || null,
+        goodreads_book_id: book['Book Id']?.trim() || null,
+        my_rating: book['My Rating'] ? parseFloat(book['My Rating']) : null,
+        average_rating: book['Average Rating'] ? parseFloat(book['Average Rating']) : null,
+        date_added: book['Date Added'] ? new Date(book['Date Added']).toISOString() : null,
+        date_read: book['Date Read'] ? new Date(book['Date Read']).toISOString() : null,
+        bookshelves: book.Bookshelves ? book.Bookshelves.split(',').map(s => s.trim()) : [],
+        exclusive_shelf: book['Exclusive Shelf']?.trim() || null,
+        publisher: book.Publisher?.trim() || null,
+        binding: book.Binding?.trim() || null,
+        number_of_pages: book['Number of Pages'] ? parseInt(book['Number of Pages']) : null,
+        year_published: book['Year Published'] ? parseInt(book['Year Published']) : null,
+        original_publication_year: book['Original Publication Year'] ? parseInt(book['Original Publication Year']) : null
+      }));
+
+    // Batch insert (Supabase handles large inserts well)
+    const BATCH_SIZE = 1000;
+    let totalInserted = 0;
+
+    for (let i = 0; i < booksToInsert.length; i += BATCH_SIZE) {
+      const batch = booksToInsert.slice(i, i + BATCH_SIZE);
+      const { error: insertError } = await supabase
+        .from('reading_list')
+        .insert(batch);
+
+      if (insertError) {
+        console.error('Error inserting books:', insertError);
+        return res.status(500).json({ 
+          error: 'Failed to save books', 
+          details: insertError.message 
+        });
+      }
+
+      totalInserted += batch.length;
+    }
+
+    // Update user's last import timestamp
+    const { error: updateError } = await supabase
+      .from('user_settings')
+      .upsert({
+        user_id: user.id,
+        last_goodreads_import: new Date().toISOString()
+      });
+
+    if (updateError) {
+      console.warn('Failed to update import timestamp:', updateError);
+    }
+
+    console.log(`Successfully imported ${totalInserted} books for user: ${user.id}`);
+    res.json({ 
+      success: true, 
+      imported: totalInserted,
+      message: `Successfully imported ${totalInserted} books from your Goodreads library!`
+    });
+
+  } catch (error) {
+    console.error('Import error:', error);
+    res.status(500).json({ 
+      error: 'Failed to import books',
+      details: error.message 
+    });
+  }
+});
 // Get reading list endpoint
 app.get('/api/reading-list', async (req, res) => {
   try {
