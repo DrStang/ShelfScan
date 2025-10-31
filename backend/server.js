@@ -732,13 +732,25 @@ app.post('/api/import-goodreads-text', async (req, res) => {
     console.log(`Processing pasted CSV for user: ${user.id}`);
     console.log(`CSV length: ${csvText.length} characters`);
 
-    // Parse CSV
+    // Auto-detect delimiter by checking first line
+    const firstLine = csvText.split('\n')[0];
+    const tabCount = (firstLine.match(/\t/g) || []).length;
+    const commaCount = (firstLine.match(/,/g) || []).length;
+    
+    // If there are more tabs than commas, it's TSV (tab-separated)
+    const delimiter = tabCount > commaCount ? '\t' : ',';
+    const format = delimiter === '\t' ? 'TSV (Tab-separated)' : 'CSV (Comma-separated)';
+    
+    console.log(`Detected format: ${format} (tabs: ${tabCount}, commas: ${commaCount})`);
+    console.log(`First 200 chars: ${csvText.substring(0, 200)}`);
+
+    // Parse with detected delimiter
     const parseResult = Papa.parse(csvText, {
       header: true,
       skipEmptyLines: true,
       trimHeaders: true,
       transformHeader: (header) => header.trim(),
-      delimiter: ",",
+      delimiter: delimiter,
       quoteChar: '"',
       escapeChar: '"',
     });
@@ -746,10 +758,27 @@ app.post('/api/import-goodreads-text', async (req, res) => {
     console.log(`Parsed ${parseResult.data.length} rows with ${parseResult.errors.length} errors`);
 
     if (parseResult.errors.length > 0) {
-      console.warn('Parse errors:', parseResult.errors.slice(0, 3));
+      console.warn('Parse errors (first 3):', parseResult.errors.slice(0, 3));
+      
+      // Only fail on critical errors, ignore TooManyFields
+      const criticalErrors = parseResult.errors.filter(e => 
+        e.type === 'Quotes' || e.type === 'Delimiter'
+      );
+      
+      if (criticalErrors.length > 0) {
+        return res.status(400).json({ 
+          error: 'CSV parsing failed',
+          details: criticalErrors[0].message 
+        });
+      }
     }
 
     const books = parseResult.data;
+
+    if (books.length > 0) {
+      console.log('Sample row keys:', Object.keys(books[0]));
+      console.log('Sample row:', JSON.stringify(books[0]).substring(0, 200));
+    }
 
     // Filter valid books
     const validBooks = books.filter(book => {
@@ -762,9 +791,13 @@ app.post('/api/import-goodreads-text', async (req, res) => {
     console.log(`Valid books: ${validBooks.length} out of ${books.length}`);
 
     if (validBooks.length === 0) {
+      console.error('No valid books found after filtering');
+      if (books.length > 0) {
+        console.error('Sample book that failed:', JSON.stringify(books[0]));
+      }
       return res.status(400).json({ 
         error: 'No valid books found',
-        details: 'Make sure you copied the complete CSV including headers'
+        details: `Parsed ${books.length} rows but none had valid titles. Make sure you copied the complete CSV including headers.`
       });
     }
 
@@ -779,7 +812,7 @@ app.post('/api/import-goodreads-text', async (req, res) => {
       return res.status(500).json({ error: 'Failed to clear existing reading list' });
     }
 
-    // Transform books
+    // Transform books - use case-insensitive field lookup
     const booksToInsert = validBooks.map(book => {
       const getField = (fieldName) => {
         const key = Object.keys(book).find(k => k.toLowerCase() === fieldName.toLowerCase());
@@ -806,6 +839,8 @@ app.post('/api/import-goodreads-text', async (req, res) => {
         original_publication_year: getField('Original Publication Year') ? parseInt(getField('Original Publication Year')) : null
       };
     });
+
+    console.log(`Prepared ${booksToInsert.length} books for insertion`);
 
     // Batch insert
     const BATCH_SIZE = 1000;
@@ -844,6 +879,8 @@ app.post('/api/import-goodreads-text', async (req, res) => {
     });
   }
 });
+
+
 
 // Get reading list endpoint
 app.get('/api/reading-list', async (req, res) => {
