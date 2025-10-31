@@ -771,7 +771,7 @@ const topThreeBooks = displayBooks.slice(0, 3);
         book={selectedBook}
         />
       <PrivacyModal
-        show={showPrivacyModal}
+        isOpen={showPrivacyModal}
         onClose={() => setShowPrivacyModal(false)}
         />
       <PwChangeModal
