@@ -237,13 +237,9 @@ This Privacy Policy complies with:
 **Thank you for using Shelf Scan!** 📚`;
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto pt-safe pb-safe">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div
-                className="bg-white rounded-xl shadow-2xl max-w-4xl w-full overflow-hidden flex flex-col"
-                style={{
-                    marginTop: 'max(1rem, env(safe-area-inset-top))',
-                    maxHeight: 'calc(100vh - 8rem)'
-                }}
+                className="bg-white rounded-xl shadow-2xl max-w-4xl w-full overflow-y-auto flex flex-col"
             >
                 <ReactMarkdown>{markdownText}</ReactMarkdown>
 
