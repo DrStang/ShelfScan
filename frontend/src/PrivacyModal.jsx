@@ -238,7 +238,7 @@ This Privacy Policy complies with:
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto pt-safe pb-safe">
-            <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-8 relative">
+            <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full p-8 relative">
 
                 <ReactMarkdown>{markdownText}</ReactMarkdown>
 
