@@ -12,9 +12,10 @@ function ReadingList({ isOpen, onClose }) {
   const [success, setSuccess] = useState('');
   const [stats, setStats] = useState(null);
   const [lastImportDate, setLastImportDate] = useState(null);
-  const [importMethod, setImportMethod] = useState('file'); // 'file' or 'url'
-  const [csvUrl, setCsvUrl] = useState('');
-  const [urlImporting, setUrlImporting] = useState(false);
+   const [importMethod, setImportMethod] = useState('file'); // 'file', 'paste', or 'desktop-only'
+  const [csvText, setCsvText] = useState('');
+  const [pasteImporting, setPasteImporting] = useState(false);
+
   const { user, session } = useAuth();
 
   const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
@@ -167,29 +168,25 @@ function ReadingList({ isOpen, onClose }) {
       setLoading(false);
     }
   };
-  const handleUrlImport = async () => {
-  if (!csvUrl.trim()) {
-    setError('Please enter a Goodreads export URL');
+ const handlePasteImport = async () => {
+  if (!csvText.trim()) {
+    setError('Please paste CSV data');
     return;
   }
 
-  if (!csvUrl.includes('goodreads.com')) {
-    setError('Please enter a valid Goodreads URL');
-    return;
-  }
-
-  setUrlImporting(true);
+  await Haptics.impact({ style: ImpactStyle.Medium });
+  setPasteImporting(true);
   setError('');
   setSuccess('');
 
   try {
-    const response = await fetch(`${API_URL}/api/import-goodreads-url`, {
+    const response = await fetch(`${API_URL}/api/import-goodreads-text`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${session.access_token}`
       },
-      body: JSON.stringify({ url: csvUrl })
+      body: JSON.stringify({ csvText })
     });
 
     const data = await response.json();
@@ -201,14 +198,17 @@ function ReadingList({ isOpen, onClose }) {
     setSuccess(`Successfully imported ${data.imported} books!`);
     await loadReadingList();
     setActiveFilter('all');
-    setCsvUrl(''); // Clear the input
+    setCsvText('');
   } catch (err) {
     console.error('Import error:', err);
     setError(err.message);
   } finally {
-    setUrlImporting(false);
+    setPasteImporting(false);
   }
 };
+
+// Helper to detect if user is on mobile
+const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
 
   if (!isOpen) return null;
@@ -238,173 +238,187 @@ function ReadingList({ isOpen, onClose }) {
         {/* Content */}
         <div className="p-6 overflow-y-auto flex-1">
           {/* Import Section */}
-          <div className="mb-6 p-4 bg-indigo-50 rounded-lg">
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">
-              Import from Goodreads
-              {lastImportDate && (
-                <span className="text-sm font-normal text-gray-600 block mt-1">
-                  Last imported: {new Date(lastImportDate).toLocaleDateString()}
-                  {new Date() - new Date(lastImportDate) > 14 * 24 * 60 * 60 * 1000 && (
-                    <span className="text-amber-600 ml-2">⚠️ Consider re-importing</span>
-                  )}
-                </span>
-              )}
-            </h3>
-            
-            <p className="text-xs text-gray-600 mb-4">
-            Due to Goodreads restrictions, your library cannot be directly connected here and must be exported. Note because of this, changes to your library will not be automatically imported. We recommend re-importing your list every 2 weeks, or sooner if your readlist changes frequently.            
-            </p>
-          
-            {/* Tab Selection */}
-            <div className="flex gap-2 mb-4 border-b border-gray-200">
-              <button
-                onClick={() => setImportMethod('file')}
-                className={`px-4 py-2 font-medium transition-colors ${
-                  importMethod === 'file'
-                    ? 'text-indigo-600 border-b-2 border-indigo-600'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                📁 Upload File
-              </button>
-              <button
-                onClick={() => setImportMethod('url')}
-                className={`px-4 py-2 font-medium transition-colors ${
-                  importMethod === 'url'
-                    ? 'text-indigo-600 border-b-2 border-indigo-600'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                🔗 Paste Link
-              </button>
-            </div>
-          
-            {/* File Upload Method */}
-            {importMethod === 'file' && (
+<div className="mb-6 p-4 bg-indigo-50 rounded-lg">
+  <h3 className="text-lg font-semibold text-gray-800 mb-2">
+    Import from Goodreads
+    {lastImportDate && (
+      <span className="text-sm font-normal text-gray-600 block mt-1">
+        Last imported: {new Date(lastImportDate).toLocaleDateString()}
+        {new Date() - new Date(lastImportDate) > 14 * 24 * 60 * 60 * 1000 && (
+          <span className="text-amber-600 ml-2">⚠️ Consider re-importing</span>
+        )}
+      </span>
+    )}
+  </h3>
+
+  <p className="text-xs text-gray-600 mb-4">
+    Due to Goodreads restrictions, your library cannot be directly connected and must be exported.
+  </p>
+
+  {/* Tab Selection */}
+  <div className="flex gap-2 mb-4 border-b border-gray-200">
+    <button
+      onClick={() => setImportMethod('file')}
+      className={`px-4 py-2 font-medium transition-colors ${
+        importMethod === 'file'
+          ? 'text-indigo-600 border-b-2 border-indigo-600'
+          : 'text-gray-500 hover:text-gray-700'
+      }`}
+    >
+      📁 Upload File
+    </button>
+    
+    {isMobile && (
+      <button
+        onClick={() => setImportMethod('paste')}
+        className={`px-4 py-2 font-medium transition-colors ${
+          importMethod === 'paste'
+            ? 'text-indigo-600 border-b-2 border-indigo-600'
+            : 'text-gray-500 hover:text-gray-700'
+        }`}
+      >
+        📋 Paste CSV
+      </button>
+    )}
+  </div>
+
+  {/* File Upload Method */}
+  {importMethod === 'file' && (
+    <>
+      <p className="text-sm text-gray-600 mb-4">
+        {isMobile ? (
+          <>
+            <strong>Mobile:</strong> Export on desktop and email the CSV to yourself, then download and upload it here.
+          </>
+        ) : (
+          <>
+            Export your library and upload the CSV file.
+          </>
+        )}
+        <a
+          href="https://www.goodreads.com/review/import"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-indigo-600 hover:text-indigo-700 ml-1"
+        >
+          Get your export →
+        </a>
+      </p>
+
+      <div className="flex gap-3">
+        <label className="flex-1 cursor-pointer">
+          <input
+            type="file"
+            accept=".csv,text/csv"
+            onChange={handleFileUpload}
+            disabled={uploading}
+            className="hidden"
+          />
+          <div className="px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2">
+            {uploading ? (
               <>
-                <p className="text-sm text-gray-600 mb-4">
-                  Export your Goodreads library and upload the CSV file.
-                  <a
-                    href="https://www.goodreads.com/review/import"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-indigo-600 hover:text-indigo-700 ml-1"
-                  >
-                    Get your export →
-                  </a>
-                </p>
-          
-                <div className="flex gap-3">
-                  <label className="flex-1 cursor-pointer">
-                    <input
-                      type="file"
-                      accept=".csv"
-                      onChange={handleFileUpload}
-                      disabled={uploading}
-                      className="hidden"
-                    />
-                    <div className="px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2">
-                      {uploading ? (
-                        <>
-                          <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
-                          <span>Importing...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Upload className="w-5 h-5" />
-                          <span>Choose CSV File</span>
-                        </>
-                      )}
-                    </div>
-                  </label>
-          
-                  {readingList.length > 0 && (
-                    <button
-                      onClick={handleClearList}
-                      disabled={loading}
-                      className="px-4 py-3 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors flex items-center gap-2"
-                    >
-                      <Trash2 className="w-5 h-5" />
-                      <span>Clear List</span>
-                    </button>
-                  )}
-                </div>
+                <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
+                <span>Importing...</span>
               </>
-            )}
-          
-            {/* URL Import Method */}
-            {importMethod === 'url' && (
+            ) : (
               <>
-                <p className="text-sm text-gray-600 mb-2">
-                  Perfect for mobile! Copy the export link and paste it here.
-                </p>
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 text-sm">
-                  <p className="font-medium text-blue-900 mb-1">📱 Mobile Instructions:</p>
-                  <ol className="text-blue-800 space-y-1 ml-4 list-decimal">
-                    <li>Go to <a href="https://www.goodreads.com/review/import" target="_blank" rel="noopener noreferrer" className="underline">Goodreads Export</a></li>
-                    <li>Tap "Export Library"</li>
-                    <li>Long-press the download link</li>
-                    <li>Select "Copy Link" or "Copy Link Address"</li>
-                    <li>Paste the link below</li>
-                  </ol>
-                </div>
-          
-                <div className="flex gap-2 mb-3">
-                  <input
-                    type="text"
-                    value={csvUrl}
-                    onChange={(e) => setCsvUrl(e.target.value)}
-                    placeholder="https://www.goodreads.com/review_porter/goodreads_export.csv?..."
-                    disabled={urlImporting}
-                    className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
-          
-                <div className="flex gap-3">
-                  <button
-                    onClick={handleUrlImport}
-                    disabled={urlImporting || !csvUrl.trim()}
-                    className="flex-1 px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {urlImporting ? (
-                      <>
-                        <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
-                        <span>Importing...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Download className="w-5 h-5" />
-                        <span>Import from Link</span>
-                      </>
-                    )}
-                  </button>
-          
-                  {readingList.length > 0 && (
-                    <button
-                      onClick={handleClearList}
-                      disabled={loading}
-                      className="px-4 py-3 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors flex items-center gap-2"
-                    >
-                      <Trash2 className="w-5 h-5" />
-                      <span>Clear</span>
-                    </button>
-                  )}
-                </div>
+                <Upload className="w-5 h-5" />
+                <span>Choose CSV File</span>
               </>
-            )}
-          
-            {/* Success/Error Messages */}
-            {error && (
-              <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-                {error}
-              </div>
-            )}
-            {success && (
-              <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">
-                {success}
-              </div>
             )}
           </div>
+        </label>
+
+        {readingList.length > 0 && (
+          <button
+            onClick={handleClearList}
+            disabled={loading}
+            className="px-4 py-3 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors flex items-center gap-2"
+          >
+            <Trash2 className="w-5 h-5" />
+            <span className="hidden sm:inline">Clear</span>
+          </button>
+        )}
+      </div>
+    </>
+  )}
+
+  {/* Paste CSV Method (Mobile Only) */}
+  {importMethod === 'paste' && isMobile && (
+    <>
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 text-sm">
+        <p className="font-medium text-blue-900 mb-2">📱 How to use Paste Import:</p>
+        <ol className="text-blue-800 space-y-1 ml-4 list-decimal text-xs">
+          <li>Open <a href="https://www.goodreads.com/review/import" target="_blank" rel="noopener noreferrer" className="underline font-medium">Goodreads Export</a> in a new tab</li>
+          <li>Tap "Export Library"</li>
+          <li>Your CSV will open in the browser (like your screenshot)</li>
+          <li>Tap "Select All" from browser menu (or press and hold to select)</li>
+          <li>Copy the entire page content</li>
+          <li>Come back here and paste into the box below</li>
+          <li>Tap "Import from Clipboard"</li>
+        </ol>
+        <p className="text-amber-700 mt-2 text-xs">
+          💡 Make sure to copy ALL the data including the header row!
+        </p>
+      </div>
+
+      <textarea
+        value={csvText}
+        onChange={(e) => setCsvText(e.target.value)}
+        placeholder="Paste your Goodreads CSV data here...
+
+Book Id,Title,Author,Author l-f,...
+206197,&quot;The First Commandment&quot;,Brad Thor,..."
+        rows={8}
+        disabled={pasteImporting}
+        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-xs mb-3"
+      />
+
+      <div className="flex gap-3">
+        <button
+          onClick={handlePasteImport}
+          disabled={pasteImporting || !csvText.trim()}
+          className="flex-1 px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {pasteImporting ? (
+            <>
+              <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
+              <span>Importing...</span>
+            </>
+          ) : (
+            <>
+              <ClipboardPaste className="w-5 h-5" />
+              <span>Import from Clipboard</span>
+            </>
+          )}
+        </button>
+
+        {readingList.length > 0 && (
+          <button
+            onClick={handleClearList}
+            disabled={loading}
+            className="px-4 py-3 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors flex items-center gap-2"
+          >
+            <Trash2 className="w-5 h-5" />
+          </button>
+        )}
+      </div>
+    </>
+  )}
+
+  {/* Success/Error Messages */}
+  {error && (
+    <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+      {error}
+    </div>
+  )}
+  {success && (
+    <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">
+      {success}
+    </div>
+  )}
+</div>
+
           {/* Stats */}
           {stats && (
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
