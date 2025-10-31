@@ -702,7 +702,11 @@ app.post('/api/import-goodreads', upload.single('file'), async (req, res) => {
     });
   }
 });
-app.post('/api/import-goodreads-url', async(req, res) => {
+// Add this new endpoint to your server.js file
+// Place it after the existing /api/import-goodreads endpoint
+
+// Import Goodreads CSV from URL endpoint (for mobile users)
+app.post('/api/import-goodreads-url', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -711,9 +715,9 @@ app.post('/api/import-goodreads-url', async(req, res) => {
 
     const token = authHeader.split(' ')[1];
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-
+    
     if (authError || !user) {
-      return res.status(401).json({ error: 'Invalid Token' });
+      return res.status(401).json({ error: 'Invalid token' });
     }
 
     const { url } = req.body;
@@ -722,11 +726,14 @@ app.post('/api/import-goodreads-url', async(req, res) => {
       return res.status(400).json({ error: 'No URL provided' });
     }
 
-    if (!url.includes('goodreads.com')){
+    // Validate that it's a Goodreads URL
+    if (!url.includes('goodreads.com')) {
       return res.status(400).json({ error: 'Invalid Goodreads URL' });
     }
+
     console.log(`Fetching Goodreads CSV from URL for user: ${user.id}`);
 
+    // Fetch the CSV from Goodreads
     let csvText;
     try {
       const response = await fetch(url, {
@@ -735,31 +742,35 @@ app.post('/api/import-goodreads-url', async(req, res) => {
         }
       });
 
-    if (!response.ok) {
-      throw new Error(`Failed to fetch CSV: ${response.status} ${response.statusText}`);
-      
-    csvText = await response.text();
-  } catch (fetchError) {
-    console.error('Error fetching CSV:' , fetchError);
-    return res.status(400).json({
-      error: 'Failed to fetch CSV from URL. Make sure the link is correct and accessible.',
-      details: fetchError.message
-    });
-  }
-  if (!csvText || csvText.length < 100) {
-    return res.status(400).json({
-      error: 'Invalid CSV content. Please make sure you copied the correct export link.' 
-    });
-  }
+      if (!response.ok) {
+        throw new Error(`Failed to fetch CSV: ${response.status} ${response.statusText}`);
+      }
 
-  const parseResult = Papa.parse(csvText, {
-    header: true,
-    skipEmptyLines: true,
-    transformHeader: (header) => header.trim()
-  });
+      csvText = await response.text();
+    } catch (fetchError) {
+      console.error('Error fetching CSV:', fetchError);
+      return res.status(400).json({ 
+        error: 'Failed to fetch CSV from URL. Make sure the link is correct and accessible.',
+        details: fetchError.message
+      });
+    }
 
-  if (parseResult.errors.length > 0) {  
-    console.error('CSV parse errors:', parseResult.errors);
+    // Validate that we got CSV content
+    if (!csvText || csvText.length < 100) {
+      return res.status(400).json({ 
+        error: 'Invalid CSV content. Please make sure you copied the correct export link.' 
+      });
+    }
+
+    // Parse CSV
+    const parseResult = Papa.parse(csvText, {
+      header: true,
+      skipEmptyLines: true,
+      transformHeader: (header) => header.trim()
+    });
+
+    if (parseResult.errors.length > 0) {
+      console.error('CSV parse errors:', parseResult.errors);
       return res.status(400).json({ 
         error: 'Failed to parse CSV', 
         details: parseResult.errors[0].message 
@@ -857,6 +868,7 @@ app.post('/api/import-goodreads-url', async(req, res) => {
     });
   }
 });
+
 // Get reading list endpoint
 app.get('/api/reading-list', async (req, res) => {
   try {
