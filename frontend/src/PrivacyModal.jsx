@@ -2,7 +2,7 @@ import React from 'react';
 import { X, Globe, Star, FileText } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 const PrivacyModal = ({ show, onClose}) => {
-    if (!open) return null;
+    if (!show) return null;
 
     const markdownText= `# Privacy Policy for Shelf Scan
 
