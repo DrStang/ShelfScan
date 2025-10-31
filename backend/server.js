@@ -766,7 +766,12 @@ app.post('/api/import-goodreads-url', async (req, res) => {
     const parseResult = Papa.parse(csvText, {
       header: true,
       skipEmptyLines: true,
-      transformHeader: (header) => header.trim()
+      trimHeaders: true,
+      transformHeader: (header) => header.trim(),
+      delimiter: ",",
+      quoteChar: '"',
+      escapeChar: '"',
+      newline: "\r\n",
     });
 
     if (parseResult.errors.length > 0) {
