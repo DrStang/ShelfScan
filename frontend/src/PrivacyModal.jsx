@@ -1,7 +1,6 @@
 import React from 'react';
-import { X } from 'lucide-react';
+import { X, Globe, Star, FileText } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
-
 const PrivacyModal = ({ isOpen, onClose}) => {
     if (!isOpen) return null;
 
@@ -242,14 +241,16 @@ This Privacy Policy complies with:
             className="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto"
             onClick={onClose}
             >
-                <div
+            <div
                     className="bg-white rounded-xl shadow-2xl max-w-4xl w-full overflow-hidden flex flex-col"
                     style={{
                         marginTop: 'max(1rem, env(safe-area-inset-top))',
                         maxHeight: 'calc(100vh - 8rem)'
                     }}
                 >
-                    {/* Close Button */}
+                <ReactMarkdown>{markdownText}</ReactMarkdown>
+
+                {/* Close Button */}
                     <button
                         onClick={onClose}
                         className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
@@ -268,7 +269,6 @@ This Privacy Policy complies with:
                     </div>
                 </div>
 
-            <ReactMarkdown>{markdownText}</ReactMarkdown>
         </div>
     );
 };
