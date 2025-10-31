@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, Book, Trash2, Loader2, AlertCircle, CheckCircle, X, Star, Download } from 'lucide-react';
+import { Upload, Book, Trash2, Loader2, AlertCircle, CheckCircle, X, Star, ClipboardPaste } from 'lucide-react';
 import { useAuth } from './AuthContext';
 
 function ReadingList({ isOpen, onClose }) {
@@ -174,7 +174,6 @@ function ReadingList({ isOpen, onClose }) {
     return;
   }
 
-  await Haptics.impact({ style: ImpactStyle.Medium });
   setPasteImporting(true);
   setError('');
   setSuccess('');
@@ -252,8 +251,7 @@ const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   </h3>
 
   <p className="text-xs text-gray-600 mb-4">
-    Due to Goodreads restrictions, your library cannot be directly connected and must be exported.
-  </p>
+Due to Goodreads restrictions, your library cannot be directly connected here and must be exported. Note because of this, changes to your library will not be automatically imported. We recommend re-importing your list every 2 weeks, or sooner if your readlist changes frequently.  </p>
 
   {/* Tab Selection */}
   <div className="flex gap-2 mb-4 border-b border-gray-200">
@@ -365,10 +363,7 @@ const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
       <textarea
         value={csvText}
         onChange={(e) => setCsvText(e.target.value)}
-        placeholder="Paste your Goodreads CSV data here...
-
-Book Id,Title,Author,Author l-f,...
-206197,&quot;The First Commandment&quot;,Brad Thor,..."
+        placeholder="Paste your Goodreads CSV data here..."
         rows={8}
         disabled={pasteImporting}
         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-xs mb-3"
