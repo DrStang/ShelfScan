@@ -729,9 +729,9 @@ app.post('/api/import-goodreads-url', async(req, res) => {
 
     let csvText;
     try {
-      const response = await fetch (url, {
+      const response = await fetch(url, {
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         }
       });
 
