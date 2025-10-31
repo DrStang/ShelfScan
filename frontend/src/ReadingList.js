@@ -178,7 +178,6 @@ function ReadingList({ isOpen, onClose }) {
     return;
   }
 
-  await Haptics.impact({ style: ImpactStyle.Medium });
   setUrlImporting(true);
   setError('');
   setSuccess('');
@@ -196,12 +195,10 @@ function ReadingList({ isOpen, onClose }) {
     const data = await response.json();
 
     if (!response.ok) {
-      await Haptics.notification({ type: NotificationType.Error });
       throw new Error(data.error || 'Failed to import');
     }
 
     setSuccess(`Successfully imported ${data.imported} books!`);
-    await Haptics.notification({ type: NotificationType.Success });
     await loadReadingList();
     setActiveFilter('all');
     setCsvUrl(''); // Clear the input
