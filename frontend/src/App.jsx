@@ -12,6 +12,7 @@ import googleImage from './Google_Play_Books_icon_(2023).svg.png';
 import goodreadsImage from './Goodreads_logo_2025.png';
 import PwChangeModal from './PwChangeModal';
 import HelpButton from "./HelpButton";
+import PrivacyModal from './PrivacyModal';
 
 
 function App() {
@@ -32,6 +33,7 @@ function App() {
   const [showOnlyMatches, setShowOnlyMatches] = useState(false);
   const [matchedCount, setMatchedCount] = useState(0);
   const [showPwChangeModal, setShowPwChangeModal] = useState(false); 
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   
 
 
@@ -705,6 +707,12 @@ const topThreeBooks = displayBooks.slice(0, 3);
               <div>
                 <h4 className="font-semibold text-gray-800 text-sm mb-2">Policies</h4>
                 <div className="space-y-1">
+                  <button
+                      onClick={() => setShowPrivacyModal(true)}
+                      className="block text-xs text-indigo-600 hover:text-indigo-800 hover:underline"
+                      >
+                    Privacy Policy
+                  </button>
                   <a 
                     href="https://affiliate-program.amazon.com/help/operating/policies" 
                     target="_blank" 
@@ -761,6 +769,10 @@ const topThreeBooks = displayBooks.slice(0, 3);
         show={showDescriptModal}
         onClose={() => setShowDescriptModal(false)}
         book={selectedBook}
+        />
+      <PrivacyModal
+        show={showPrivacyModal}
+        onClose={() => setShowPrivacyModal(false)}
         />
       <PwChangeModal
         isOpen={showPwChangeModal}
