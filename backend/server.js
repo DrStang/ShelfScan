@@ -702,7 +702,7 @@ app.post('/api/import-goodreads', upload.single('file'), async (req, res) => {
     });
   }
 });
-app.post('/api/import-goodreads-url', async (req, res) => {
+app.post('/api/import-goodreads-text', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -716,59 +716,23 @@ app.post('/api/import-goodreads-url', async (req, res) => {
       return res.status(401).json({ error: 'Invalid token' });
     }
 
-    const { url } = req.body;
+    const { csvText } = req.body;
 
-    if (!url) {
-      return res.status(400).json({ error: 'No URL provided' });
+    if (!csvText || typeof csvText !== 'string') {
+      return res.status(400).json({ error: 'No CSV text provided' });
     }
 
-    if (!url.includes('goodreads.com')) {
-      return res.status(400).json({ error: 'Invalid Goodreads URL' });
-    }
-
-    console.log(`Fetching Goodreads CSV from URL for user: ${user.id}`);
-    console.log(`URL: ${url.substring(0, 100)}...`); // Log partial URL
-
-    // Fetch the CSV from Goodreads
-    let csvText;
-    try {
-      const response = await fetch(url, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-          'Accept': 'text/csv, text/plain, */*'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch CSV: ${response.status} ${response.statusText}`);
-      }
-
-      // Log response details
-      console.log('Response status:', response.status);
-      console.log('Response content-type:', response.headers.get('content-type'));
-      
-      csvText = await response.text();
-      console.log('CSV text length:', csvText.length);
-      console.log('First 200 chars:', csvText.substring(0, 200));
-      
-    } catch (fetchError) {
-      console.error('Error fetching CSV:', fetchError);
+    if (csvText.length < 100) {
       return res.status(400).json({ 
-        error: 'Failed to fetch CSV from URL. Make sure the link is correct and accessible.',
-        details: fetchError.message
+        error: 'CSV text too short',
+        details: 'Please paste the complete CSV data'
       });
     }
 
-    if (!csvText || csvText.length < 100) {
-      console.error('CSV too short or empty');
-      return res.status(400).json({ 
-        error: 'Invalid CSV content. Please make sure you copied the correct export link.',
-        details: `Received ${csvText?.length || 0} characters`
-      });
-    }
+    console.log(`Processing pasted CSV for user: ${user.id}`);
+    console.log(`CSV length: ${csvText.length} characters`);
 
-    // Parse CSV with detailed logging
-    console.log('Starting CSV parse...');
+    // Parse CSV
     const parseResult = Papa.parse(csvText, {
       header: true,
       skipEmptyLines: true,
@@ -779,37 +743,28 @@ app.post('/api/import-goodreads-url', async (req, res) => {
       escapeChar: '"',
     });
 
-    console.log('Parse complete. Errors:', parseResult.errors.length);
-    console.log('Rows parsed:', parseResult.data.length);
-    
-    if (parseResult.errors.length > 0) {
-      console.warn('First 3 parse errors:', parseResult.errors.slice(0, 3));
-    }
+    console.log(`Parsed ${parseResult.data.length} rows with ${parseResult.errors.length} errors`);
 
-    if (parseResult.data.length > 0) {
-      console.log('First row keys:', Object.keys(parseResult.data[0]));
-      console.log('First row Title:', parseResult.data[0].Title);
-      console.log('First row has Title?', !!parseResult.data[0].Title);
+    if (parseResult.errors.length > 0) {
+      console.warn('Parse errors:', parseResult.errors.slice(0, 3));
     }
 
     const books = parseResult.data;
-    
-    // More detailed filtering
-    const booksWithTitles = books.filter(book => {
-      const hasTitle = book.Title && book.Title.trim();
-      if (!hasTitle) {
-        console.log('Book without title found:', JSON.stringify(book).substring(0, 100));
-      }
-      return hasTitle;
-    });
-    
-    console.log(`Books with titles: ${booksWithTitles.length} out of ${books.length}`);
 
-    if (booksWithTitles.length === 0) {
-      console.error('No valid books found after filtering');
+    // Filter valid books
+    const validBooks = books.filter(book => {
+      const titleKey = Object.keys(book).find(k => k.toLowerCase() === 'title');
+      if (!titleKey) return false;
+      const title = book[titleKey];
+      return title && typeof title === 'string' && title.trim().length > 0;
+    });
+
+    console.log(`Valid books: ${validBooks.length} out of ${books.length}`);
+
+    if (validBooks.length === 0) {
       return res.status(400).json({ 
-        error: 'No books found in CSV. Please check the export link.',
-        details: `Parsed ${books.length} rows but none had valid titles`
+        error: 'No valid books found',
+        details: 'Make sure you copied the complete CSV including headers'
       });
     }
 
@@ -824,28 +779,33 @@ app.post('/api/import-goodreads-url', async (req, res) => {
       return res.status(500).json({ error: 'Failed to clear existing reading list' });
     }
 
-    // Transform and insert books
-    const booksToInsert = booksWithTitles.map(book => ({
-      user_id: user.id,
-      title: book.Title?.trim() || '',
-      author: book.Author?.trim() || null,
-      isbn: book.ISBN?.replace(/[="]/g, '').trim() || null,
-      isbn13: book.ISBN13?.replace(/[="]/g, '').trim() || null,
-      goodreads_book_id: book['Book Id']?.trim() || null,
-      my_rating: book['My Rating'] ? parseFloat(book['My Rating']) : null,
-      average_rating: book['Average Rating'] ? parseFloat(book['Average Rating']) : null,
-      date_added: book['Date Added'] ? new Date(book['Date Added']).toISOString() : null,
-      date_read: book['Date Read'] ? new Date(book['Date Read']).toISOString() : null,
-      bookshelves: book.Bookshelves ? book.Bookshelves.split(',').map(s => s.trim()) : [],
-      exclusive_shelf: book['Exclusive Shelf']?.trim() || null,
-      publisher: book.Publisher?.trim() || null,
-      binding: book.Binding?.trim() || null,
-      number_of_pages: book['Number of Pages'] ? parseInt(book['Number of Pages']) : null,
-      year_published: book['Year Published'] ? parseInt(book['Year Published']) : null,
-      original_publication_year: book['Original Publication Year'] ? parseInt(book['Original Publication Year']) : null
-    }));
+    // Transform books
+    const booksToInsert = validBooks.map(book => {
+      const getField = (fieldName) => {
+        const key = Object.keys(book).find(k => k.toLowerCase() === fieldName.toLowerCase());
+        return key ? book[key] : null;
+      };
 
-    console.log(`Prepared ${booksToInsert.length} books for insertion`);
+      return {
+        user_id: user.id,
+        title: getField('Title')?.trim() || '',
+        author: getField('Author')?.trim() || null,
+        isbn: getField('ISBN')?.replace(/[="]/g, '').trim() || null,
+        isbn13: getField('ISBN13')?.replace(/[="]/g, '').trim() || null,
+        goodreads_book_id: getField('Book Id')?.trim() || null,
+        my_rating: getField('My Rating') ? parseFloat(getField('My Rating')) : null,
+        average_rating: getField('Average Rating') ? parseFloat(getField('Average Rating')) : null,
+        date_added: getField('Date Added') ? new Date(getField('Date Added')).toISOString() : null,
+        date_read: getField('Date Read') ? new Date(getField('Date Read')).toISOString() : null,
+        bookshelves: getField('Bookshelves') ? getField('Bookshelves').split(',').map(s => s.trim()) : [],
+        exclusive_shelf: getField('Exclusive Shelf')?.trim() || null,
+        publisher: getField('Publisher')?.trim() || null,
+        binding: getField('Binding')?.trim() || null,
+        number_of_pages: getField('Number of Pages') ? parseInt(getField('Number of Pages')) : null,
+        year_published: getField('Year Published') ? parseInt(getField('Year Published')) : null,
+        original_publication_year: getField('Original Publication Year') ? parseInt(getField('Original Publication Year')) : null
+      };
+    });
 
     // Batch insert
     const BATCH_SIZE = 1000;
@@ -868,7 +828,8 @@ app.post('/api/import-goodreads-url', async (req, res) => {
       totalInserted += batch.length;
     }
 
-    console.log(`Successfully imported ${totalInserted} books for user: ${user.id}`);
+    console.log(`✅ Successfully imported ${totalInserted} books for user: ${user.id}`);
+    
     res.json({ 
       success: true, 
       imported: totalInserted,
@@ -883,7 +844,6 @@ app.post('/api/import-goodreads-url', async (req, res) => {
     });
   }
 });
-
 
 // Get reading list endpoint
 app.get('/api/reading-list', async (req, res) => {
