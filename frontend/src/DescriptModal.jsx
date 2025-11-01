@@ -13,7 +13,7 @@ const DescriptModal = ({ show, onClose, book }) => {
             onClick={onClose}
         >
         <div 
-            className="bg-white rounded-xl shadow-2xl max-w-4xl w-full overflow-hidden flex flex-col"
+            className="bg-white rounded-xl shadow-2xl max-w-4xl w-full overflow-hidden flex flex-col p-6 sm:p-8"
             style={{ 
               marginTop: 'max(1rem, env(safe-area-inset-top))',
               maxHeight: 'calc(100vh - 8rem)'
