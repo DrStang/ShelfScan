@@ -715,7 +715,7 @@ const topThreeBooks = displayBooks.slice(0, 3);
                       className="text-xs text-indigo-600 hover:text-indigo-800 hover:underline"
                       >
                     Privacy Policy
-                  </button>
+                  </a>
                   <a 
                     href="https://affiliate-program.amazon.com/help/operating/policies" 
                     target="_blank" 
