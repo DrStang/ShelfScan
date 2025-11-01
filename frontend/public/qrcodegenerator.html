@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shelf Scan - QR Code</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .container {
+            text-align: center;
+            padding: 2rem;
+            max-width: 600px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            margin-bottom: 1rem;
+            font-size: 2rem;
+        }
+        .subtitle {
+            opacity: 0.9;
+            margin-bottom: 2rem;
+            font-size: 1.1rem;
+        }
+        #qrcode {
+            background: white;
+            padding: 20px;
+            border-radius: 16px;
+            display: inline-block;
+            margin: 2rem auto;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        }
+        .instructions {
+            margin-top: 2rem;
+            font-size: 0.95rem;
+            line-height: 1.8;
+            opacity: 0.95;
+        }
+        .instructions ol {
+            text-align: left;
+            display: inline-block;
+            margin: 1rem auto;
+        }
+        .instructions li {
+            margin: 0.5rem 0;
+        }
+        .url-display {
+            margin-top: 2rem;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 0.85rem;
+            word-break: break-all;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .url-display:hover {
+            background: rgba(0, 0, 0, 0.3);
+        }
+        .copy-btn {
+            display: inline-block;
+            margin-top: 1rem;
+            padding: 10px 20px;
+            background: white;
+            color: #667eea;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: transform 0.2s;
+            cursor: pointer;
+            border: none;
+            font-size: 14px;
+        }
+        .copy-btn:hover {
+            transform: scale(1.05);
+        }
+        .copied {
+            color: #4ade80;
+            font-weight: 600;
+            margin-top: 0.5rem;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .copied.show {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📱 Shelf Scan App</h1>
+        <p class="subtitle">Scan to verify your email and open the app</p>
+        
+        <div id="qrcode"></div>
+        
+        <div class="instructions">
+            <p><strong>How to use:</strong></p>
+            <ol>
+                <li>Open your phone's camera app</li>
+                <li>Point it at the QR code above</li>
+                <li>Tap the notification to open Shelf Scan</li>
+            </ol>
+        </div>
+
+        <div class="url-display" id="urlDisplay" onclick="copyToClipboard()">
+            <div id="deepLinkUrl">Loading...</div>
+        </div>
+        
+        <button class="copy-btn" onclick="copyToClipboard()">📋 Copy Link</button>
+        <div class="copied" id="copiedMsg">✓ Copied to clipboard!</div>
+    </div>
+
+    <!-- QR Code Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    
+    <script>
+        // Get the hash fragment from the URL (contains auth tokens)
+        const hash = window.location.hash || '#access_token=example_token&refresh_token=example_refresh';
+        
+        // Build the deep link URL
+        const deepLink = `shelfscan://auth/callback${hash}`;
+        
+        console.log('Generating QR code for:', deepLink);
+        
+        // Display the URL
+        document.getElementById('deepLinkUrl').textContent = deepLink;
+        
+        // Generate QR code
+        new QRCode(document.getElementById("qrcode"), {
+            text: deepLink,
+            width: 256,
+            height: 256,
+            colorDark: "#000000",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.H
+        });
+
+        // Copy to clipboard function
+        function copyToClipboard() {
+            const url = deepLink;
+            
+            // Modern clipboard API
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(url).then(() => {
+                    showCopiedMessage();
+                }).catch(err => {
+                    // Fallback for older browsers
+                    fallbackCopy(url);
+                });
+            } else {
+                // Fallback for older browsers
+                fallbackCopy(url);
+            }
+        }
+
+        function fallbackCopy(text) {
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            textArea.style.position = "fixed";
+            textArea.style.left = "-999999px";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            
+            try {
+                document.execCommand('copy');
+                showCopiedMessage();
+            } catch (err) {
+                console.error('Failed to copy:', err);
+                alert('Failed to copy. Please copy manually.');
+            }
+            
+            document.body.removeChild(textArea);
+        }
+
+        function showCopiedMessage() {
+            const msg = document.getElementById('copiedMsg');
+            msg.classList.add('show');
+            setTimeout(() => {
+                msg.classList.remove('show');
+            }, 2000);
+        }
+
+        // If running standalone (not as callback), show example
+        if (!window.location.hash) {
+            console.log('No hash found - showing example QR code');
+            document.querySelector('.subtitle').textContent = 'Example QR Code (use actual callback URL for real tokens)';
+        }
+    </script>
+</body>
+</html>
