@@ -1,10 +1,10 @@
-import React, {useEffect, useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import { X } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import file from './PrivacyPolicy.md'
 const PrivacyModal = ({ isOpen, onClose}) => {
     if (!isOpen) return null;
-    
+
     const [text, setText] = useState('');
     useEffect(() => {
         fetch(file)
@@ -13,7 +13,7 @@ const PrivacyModal = ({ isOpen, onClose}) => {
                 setText(md);
             })
     }, [])
-    
+
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div
