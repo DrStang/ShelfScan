@@ -706,10 +706,13 @@ const topThreeBooks = displayBooks.slice(0, 3);
               {/* Policies */}
               <div>
                 <h4 className="font-semibold text-gray-800 text-sm mb-2">Policies</h4>
-                <div className="space-y-1">
-                  <button
-                      onClick={() => setShowPrivacyModal(true)}
-                      className="block text-xs text-indigo-600 hover:text-indigo-800 hover:underline"
+                <div className="space-y-1 flex flex-col items-center">
+                  <a href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setShowPrivacyModal(true)
+                      }}
+                      className="text-xs text-indigo-600 hover:text-indigo-800 hover:underline"
                       >
                     Privacy Policy
                   </button>
@@ -717,7 +720,7 @@ const topThreeBooks = displayBooks.slice(0, 3);
                     href="https://affiliate-program.amazon.com/help/operating/policies" 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="block text-xs text-indigo-600 hover:text-indigo-800 hover:underline"
+                    className="text-xs text-indigo-600 hover:text-indigo-800 hover:underline"
                   >
                     Amazon Associates Policy
                   </a>
@@ -744,8 +747,6 @@ const topThreeBooks = displayBooks.slice(0, 3);
               <div className="flex flex-col md:flex-row items-center justify-between gap-3 text-xs text-gray-500">
                 <span>© 2025 Shelf Scan. All rights reserved.</span>
                 <div className="flex items-center gap-3">
-                  <span>Made with ❤️ for book lovers</span>
-                  <span className="hidden md:inline">•</span>
                   <span>Powered by OpenAI Vision</span>
                 </div>
               </div>
