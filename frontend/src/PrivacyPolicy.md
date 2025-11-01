@@ -200,7 +200,6 @@ If you have questions about this Privacy Policy or our data practices, please co
 
 **Email:** admin@shelfscan.xyz  
 **App Name:** Shelf Scan  
-**Developer:** Daniel Dolewski
 
 For data deletion requests, security concerns, or privacy inquiries, please use the email above.
 
