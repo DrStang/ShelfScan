@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Globe, Star, FileText } from 'lucide-react';
+import { X, Globe, Star } from 'lucide-react';
 
 // 1. DEFINE THE CUSTOM SVG COMPONENT IN JSX FORMAT
 // We convert SVG attributes to camelCase (e.g., stroke-width -> strokeWidth)
