@@ -24,7 +24,7 @@ function ReadingList({ isOpen, onClose }) {
     if (isOpen && user) {
       loadReadingList();
     }
-  }, [isOpen, user]);
+  }, [isOpen, user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadReadingList = async () => {
     setLoading(true);
