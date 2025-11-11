@@ -707,15 +707,15 @@ const topThreeBooks = displayBooks.slice(0, 3);
               <div>
                 <h4 className="font-semibold text-gray-800 text-sm mb-2">Policies</h4>
                 <div className="space-y-1 flex flex-col items-center">
-                  <a href="#"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        setShowPrivacyModal(true)
-                      }}
-                      className="text-xs text-indigo-600 hover:text-indigo-800 hover:underline"
-                      >
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setShowPrivacyModal(true)
+                    }}
+                    className="text-xs text-indigo-600 hover:text-indigo-800 hover:underline bg-transparent border-none cursor-pointer"
+                  >
                     Privacy Policy
-                  </a>
+                  </button>
                   <a 
                     href="https://affiliate-program.amazon.com/help/operating/policies" 
                     target="_blank" 
