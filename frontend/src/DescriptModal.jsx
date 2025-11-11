@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Globe, Star, FileText } from 'lucide-react';
+import { X } from 'lucide-react';
 
 const DescriptModal = ({ show, onClose, book }) => {
     if (!show || !book) {
