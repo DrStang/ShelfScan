@@ -65,7 +65,7 @@ function App() {
     } else {
       setScanHistory([]);
     }
-  }, [user]);
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadScanHistory = async () => {
     if (!user) return;
