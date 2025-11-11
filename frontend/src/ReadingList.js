@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, Book, Trash2, Loader2, AlertCircle, CheckCircle, X, Star, ClipboardPaste } from 'lucide-react';
+import { Upload, Book, Trash2, Loader2, X, Star, ClipboardPaste } from 'lucide-react';
 import { useAuth } from './AuthContext';
 
 function ReadingList({ isOpen, onClose }) {
