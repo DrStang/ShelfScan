@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, Book, Star, Loader2, AlertCircle, Camera, User, LogOut, History, Globe, BookOpen } from 'lucide-react';
+import { Upload, Book, Star, Loader2, AlertCircle, Camera, User, LogOut, History, BookOpen } from 'lucide-react';
 import { useAuth } from './AuthContext';
 import AuthModal from './AuthModal';
 import ReadingList from './ReadingList';
