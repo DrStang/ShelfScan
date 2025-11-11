@@ -182,6 +182,9 @@ async function searchOpenLibrary(title, author) {
           console.log('Could not fetch Open Library ratings');
         }
       }
+      let thumbnail = book.cover_i
+        ? `https://covers.openlibrary.org/b/id/${book.cover_i}-M.jpg`
+        : null;
       
       return {
         title: book.title || title,
@@ -189,9 +192,7 @@ async function searchOpenLibrary(title, author) {
         rating: rating,
         ratingsCount: ratingsCount,
         description: book.first_sentence?.[0] || '',
-        thumbnail: book.cover_i 
-          ? `https://covers.openlibrary.org/b/id/${book.cover_i}-M.jpg`
-          : null,
+        thumbnail: thumbnail,
         isbn: book.isbn?.[0] || null,
         publishYear: book.first_publish_year || null,
         source: 'openlibrary'
@@ -227,6 +228,11 @@ async function searchGoogleBooks(title, author) {
         const isbn10 = bookInfo.industryIdentifiers.find(id => id.type === 'ISBN_10');
         isbn = isbn13?.identifier || isbn10?.identifier || null;
       }
+
+      let thumbnail = bookInfo.imageLinks?.thumbnail || null;
+      if (thumbnail) {
+        thumbnail = thumbnail.replace('http://', 'https://');
+      }  
       
       return {
         title: bookInfo.title || title,
@@ -234,7 +240,7 @@ async function searchGoogleBooks(title, author) {
         rating: bookInfo.averageRating || 0,
         ratingsCount: bookInfo.ratingsCount || 0,
         description: bookInfo.description || '',
-        thumbnail: bookInfo.imageLinks?.thumbnail || null,
+        thumbnail: thumbnail,
         infoLink: bookInfo.infoLink || null,
         isbn: isbn,
         publishYear: bookInfo.publishedDate ? parseInt(bookInfo.publishedDate.substring(0, 4)) : null,
