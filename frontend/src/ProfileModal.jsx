@@ -66,8 +66,8 @@ const ProfileModal = ({isOpen, onClose}) => {
         </button>
         <div className="space-y-4">
           <div>
-            <p className="text-sm text-gray-500">Signed in as</p>
-            <p className="font-semibold text-gray-800">{user.email}</p>
+            <p className="flex items-center justify-center text-sm text-gray-500">Signed in as</p>
+            <p className="flex items-center justify-center font-semibold text-gray-800">{user.email}</p>
           </div>
           <button
             onClick={() => setShowPwChangeModal(true)}
@@ -86,7 +86,7 @@ const ProfileModal = ({isOpen, onClose}) => {
           </button>
           <button
             onClick={handleSignOut}
-            className="p-2 sm:px-3 sm:py-2 lg:px-4 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-1.5"
+            className="w-full px-4 py-3 bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 transition-colors flex items-center justify-center gap-2"
             title="Sign Out"
           >
             <LogOut className="w-4 h-4" />
