@@ -10,7 +10,7 @@ const profileModal = ({isOpen, onClose}) => {
   if (!isOpen) return null; 
 
   const [showPwChangeModal, setShowPwChangeModal] = useState(false);
-  const [showDeleteAccountModal, sestShowDeleteAccountModal] = useState(false);
+  const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
   
   const {user, signOut, session } = useAuth();
   const API_URL = process.env.REACT_APP_API_URL
@@ -48,6 +48,7 @@ const profileModal = ({isOpen, onClose}) => {
   };
   
   return (
+    <>
     <div
       className="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p4"
       onClick={onClose}
@@ -104,6 +105,7 @@ const profileModal = ({isOpen, onClose}) => {
       onConfirmDelete={handleDeleteAccount}
       userEmail={user?.email}
     />
+    </>
   );
 }  
 
