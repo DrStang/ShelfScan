@@ -6,7 +6,7 @@ import { useAuth } from './AuthContext';
 
 
 
-export default function profileModal = ({isOpen, onClose}) => {
+const profileModal = ({isOpen, onClose}) => {
   if (!isOpen) return null; 
 
   const [showPwChangeModal, setShowPwChangeModal] = useState(false);
@@ -106,6 +106,7 @@ export default function profileModal = ({isOpen, onClose}) => {
     />
   );
 }  
-  
+
+export default profileModal;
           
           
