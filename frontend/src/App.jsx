@@ -784,6 +784,7 @@ const topThreeBooks = displayBooks.slice(0, 3);
       <profileModal
         isOpen={showProfileModal}
         onClose={() => setShowProfileModal(false)}
+        />
       <HelpButton />
     </>
   );
