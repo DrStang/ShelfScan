@@ -7,7 +7,7 @@ import { useAuth } from './AuthContext';
 
 
 const ProfileModal = ({isOpen, onClose}) => {
-  if (!isOpen) return null; 
+  
 
   const [showPwChangeModal, setShowPwChangeModal] = useState(false);
   const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
@@ -46,6 +46,7 @@ const ProfileModal = ({isOpen, onClose}) => {
       throw err;
     }  
   };
+  if (!isOpen) return null; 
   
   return (
     <>
