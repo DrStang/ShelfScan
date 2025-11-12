@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import {X, Trash2, AlertTriangle, Key, LogOut } from 'lucide-react';
+import {X, Trash2, Key, LogOut } from 'lucide-react';
 import PwChangeModal from './PwChangeModal';
 import DeleteAccountModal from './DeleteAccountModal';
 import { useAuth } from './AuthContext';
@@ -13,7 +13,6 @@ const ProfileModal = ({isOpen, onClose}) => {
   const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
   
   const {user, signOut, session } = useAuth();
-  const API_URL = process.env.REACT_APP_API_URL
 
   const handleSignOut = async () => {
     await signOut();
