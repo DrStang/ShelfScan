@@ -271,12 +271,16 @@ const topThreeBooks = displayBooks.slice(0, 3);
                     </button>
                     
                     {/* User Email - Hidden on mobile */}
-                    <div className="hidden xl:flex items-center gap-2 px-3 py-2 bg-indigo-50 rounded-lg">
-                      <User className="w-4 h-4 text-indigo-600" />
-                      <span className="text-sm text-gray-700 max-w-[120px] truncate">{user.email}</span>
-                    </div>
+                    <button
+                      onClick=() => setShowProfileModal(true)}
+                      className="p-2 sm:px-3 sm:py-2 lg:px-4 bg-indigo-50 rounded-lg"
+                      title="User Profile"
+                    >
+                      <User className="w-4 h-4" />  
+                       <span className="text-sm text-gray-700 max-w-[120px] truncate">{user.email}</span>
+                    </button>
                     
-                    {/* Change Password Button */}
+                    {/* Change Password Button 
                     <button
                       onClick={() => setShowProfileModal(true)}
                       className="p-2 sm:px-3 sm:py-2 lg:px-4 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors flex items-center gap-1.5"
@@ -284,7 +288,7 @@ const topThreeBooks = displayBooks.slice(0, 3);
                     >
                       <User className="w-4 h-4" />
                       <span className="hidden lg:inline text-sm">Change Password</span>
-                    </button>
+                    </button>*/}
                     
                     {/* Sign Out Button */}
                     <button
