@@ -272,7 +272,7 @@ const topThreeBooks = displayBooks.slice(0, 3);
                     
                     {/* User Email - Hidden on mobile */}
                     <button
-                      onClick=() => setShowProfileModal(true)}
+                      onClick={() => setShowProfileModal(true)}
                       className="p-2 sm:px-3 sm:py-2 lg:px-4 bg-indigo-50 rounded-lg"
                       title="User Profile"
                     >
