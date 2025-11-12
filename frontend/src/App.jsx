@@ -13,6 +13,7 @@ import goodreadsImage from './Goodreads_logo_2025.png';
 import PwChangeModal from './PwChangeModal';
 import HelpButton from "./HelpButton";
 import PrivacyModal from './PrivacyModal';
+import profileModal from './profileModal';
 
 
 function App() {
@@ -34,6 +35,7 @@ function App() {
   const [matchedCount, setMatchedCount] = useState(0);
   const [showPwChangeModal, setShowPwChangeModal] = useState(false); 
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false); 
   
 
 
@@ -276,7 +278,7 @@ const topThreeBooks = displayBooks.slice(0, 3);
                     
                     {/* Change Password Button */}
                     <button
-                      onClick={() => setShowPwChangeModal(true)}
+                      onClick={() => setShowProfileModal(true)}
                       className="p-2 sm:px-3 sm:py-2 lg:px-4 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors flex items-center gap-1.5"
                       title="Change Password"
                     >
@@ -779,6 +781,9 @@ const topThreeBooks = displayBooks.slice(0, 3);
         isOpen={showPwChangeModal}
         onClose={() => setShowPwChangeModal(false)}
         />
+      <profileModal
+        isOpen={showProfileModal}
+        onClose={() => setShowProfileModal(false)}
       <HelpButton />
     </>
   );
