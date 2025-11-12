@@ -71,7 +71,7 @@ const ProfileModal = ({isOpen, onClose}) => {
           </div>
           <button
             onClick={() => setShowPwChangeModal(true)}
-            className="p-2 px-4 bg-purple-100 text-purple-700 rounded-full hover:bg-purple-200 transition-colors flex items-center gap-1.5"
+            className="w-full px-4 py-3 bg-purple-100 text-purple-700 rounded-full font-semibold hover:bg-purple-200 transition-colors flex items-center justify-center gap-2"
             title="Change Password"
           >
             <Key className="w-4 h-4" />
