@@ -13,7 +13,7 @@ import goodreadsImage from './Goodreads_logo_2025.png';
 import PwChangeModal from './PwChangeModal';
 import HelpButton from "./HelpButton";
 import PrivacyModal from './PrivacyModal';
-import profileModal from './profileModal';
+import ProfileModal from './ProfileModal';
 
 
 function App() {
@@ -781,7 +781,7 @@ const topThreeBooks = displayBooks.slice(0, 3);
         isOpen={showPwChangeModal}
         onClose={() => setShowPwChangeModal(false)}
         />
-      <profileModal
+      <ProfileModal
         isOpen={showProfileModal}
         onClose={() => setShowProfileModal(false)}
         />
