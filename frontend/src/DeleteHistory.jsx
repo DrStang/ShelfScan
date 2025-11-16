@@ -30,10 +30,10 @@ function DeleteHistory({ scan, onDelete }) {
           <h3 className="text-xl font-bold text-gray-800">Delete Scan?</h3>
         </div>
   
-        <p className="text-gray-600 mb-6">
+          <p className="text-gray-600 mb-6">
           This scan from {new Date(scan.created_at).toLocaleDateString()} with{' '}
-          {scan.books.length} book{scan.books.length !== 1 ? 's" : ''} will be permanently deleted.
-        </p>
+          {scan.books.length} book{scan.books.length !== 1 ? 's' : ''} will be permanently deleted.
+          </p>
   
         <div className="flex gap-3">
           <button
