@@ -34,10 +34,11 @@ function App() {
   const [savingScan, setSavingScan] = useState(false);
   const [showOnlyMatches, setShowOnlyMatches] = useState(false);
   const [matchedCount, setMatchedCount] = useState(0);
-  const [showPwChangeModal, setShowPwChangeModal] = useState(false); 
+  const [showPwChangeModal, setShowPwChangeModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
-  const [showProfileModal, setShowProfileModal] = useState(false); 
+  const [showProfileModal, setShowProfileModal] = useState(false);
   const [showDeleteHistory, setShowDeleteHistory] = useState(false);
+  const [selectedScanForDelete, setSelectedScanForDelete] = useState(null);
   
 
 
@@ -382,10 +383,13 @@ const topThreeBooks = displayBooks.slice(0, 3);
                         )}
                         <span>
                           <button
-                              onClick={() => setShowDeleteHistory(true)}
-                              className="min-h-[44px] text-blue-600 hover:text-blue-800 underline font-medium cursor-pointer touch-manipulation flex items-center"
+                              onClick={() => {
+                                setSelectedScanForDelete(scan);
+                                setShowDeleteHistory(true);
+                              }}
+                              className="min-h-[44px] text-red-600 hover:text-red-800 underline font-medium cursor-pointer touch-manipulation flex items-center"
                           >
-                                  Delete
+                            Delete
                           </button>
                         </span>
                       </div>
@@ -834,10 +838,13 @@ const topThreeBooks = displayBooks.slice(0, 3);
         />
       <DeleteHistory
         isOpen={showDeleteHistory}
-        onClose={() => setShowProfileModal(false)}
-        scan={scanHistory}
+        onClose={() => {
+          setShowDeleteHistory(false);
+          setSelectedScanForDelete(null);
+        }}
+        scan={selectedScanForDelete}
         onDelete={handleDeleteScan}
-        />
+      />
       <HelpButton />
     </>
   );

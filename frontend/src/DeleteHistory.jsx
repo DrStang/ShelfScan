@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
 import { Trash2 } from 'lucide-react';
 
-function DeleteHistory({ scan, onDelete }) {
+function DeleteHistory({ isOpen, onClose, scan, onDelete }) {
   const [isDeleting, setIsDeleting] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  if (!isOpen || !scan) return null;
 
   const handleDelete = async () => {
     setIsDeleting(true);
 
     try {
       await onDelete(scan.id);
+      onClose();
     } catch (error) {
       console.error('Error deleting scan:', error);
       setIsDeleting(false);
@@ -17,7 +19,7 @@ function DeleteHistory({ scan, onDelete }) {
   };
 
   const handleCancelDelete = () => {
-    setShowDeleteConfirm(false); 
+    onClose();
   };
 
   return (
@@ -29,42 +31,42 @@ function DeleteHistory({ scan, onDelete }) {
           </div>
           <h3 className="text-xl font-bold text-gray-800">Delete Scan?</h3>
         </div>
-  
-          <p className="text-gray-600 mb-6">
+
+        <p className="text-gray-600 mb-6">
           This scan from {new Date(scan.created_at).toLocaleDateString()} with{' '}
           {scan.books.length} book{scan.books.length !== 1 ? 's' : ''} will be permanently deleted.
-          </p>
-  
+        </p>
+
         <div className="flex gap-3">
           <button
             onClick={handleCancelDelete}
             disabled={isDeleting}
-            className="flex-1 px-4 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300"
+            className="flex-1 px-4 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 disabled:opacity-50"
           >
             Cancel
           </button>
           <button
             onClick={handleDelete}
             disabled={isDeleting}
-            className="flex-1 px-4 py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 flex items-center justify-center gap-2"
+            className="flex-1 px-4 py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {isDeleting ? (
-                <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"> </div>
-                    Deleting...
-                </>
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                Deleting...
+              </>
             ) : (
-                <>
-                    <Trash2 className="w-4 h-4" />
-                    Delete
-                </>
+              <>
+                <Trash2 className="w-4 h-4" />
+                Delete
+              </>
             )}
           </button>
         </div>
       </div>
     </div>
   );
-}  
+}
 
 export default DeleteHistory;
   
