@@ -286,7 +286,7 @@ Due to Goodreads restrictions, your library cannot be directly connected here an
       <p className="text-sm text-gray-600 mb-4">
         {isMobile ? (
           <>
-            <strong>Mobile:</strong> Export on desktop and email the CSV to yourself, then download and upload it here.
+            <strong>Mobile:</strong> Export through Goodreads.com on desktop and email the CSV to yourself, then download and upload it here.
           </>
         ) : (
           <>
@@ -302,7 +302,14 @@ Due to Goodreads restrictions, your library cannot be directly connected here an
           Get your export →
         </a>
       </p>
-
+      <ol className="ml-4 space-y-1">
+            <li>1. Click the above 'Get your export' link. </li>
+            <li>2. Click 'Export Library' on Goodreads site </li>
+            <li>3. Download the generated list </li>
+            <li>4. Come back to this website and 'Choose CSV File'</li>
+            <li>5. Select the downloaded CSV file</li>
+            <li>6. Your reading list is now imported into Shelf Scan!</li>
+      </ol>
       <div className="flex gap-3">
         <label className="flex-1 cursor-pointer">
           <input
