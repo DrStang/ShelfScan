@@ -128,17 +128,14 @@ const HelpButton = () => {
                                         Auto-highlight books you own when scanning!
                                     </p>
                                     <div className="space-y-2 text-sm text-emerald-700">
-                                        <p><strong>On Goodreads:</strong></p>
+                                        <p><strong>Under 'My Reading List':</strong></p>
                                         <ol className="ml-4 space-y-1">
-                                            <li>1. Go to "My Books"</li>
-                                            <li>2. Find "Import and export"</li>
-                                            <li>3. Export Library → Download CSV</li>
-                                        </ol>
-                                        <p className="mt-2"><strong>In Shelf Scan:</strong></p>
-                                        <ol className="ml-4 space-y-1">
-                                            <li>1. Go to Profile → My Library</li>
-                                            <li>2. Import from Goodreads</li>
-                                            <li>3. Upload CSV file</li>
+                                            <li>1. Click the 'Get your export' link. </li>
+                                            <li>2. Click 'Export Library' on Goodreads site </li>
+                                            <li>3. Download the generated list </li>
+                                            <li>4. Come back to this website and 'Choose CSV File'</li>
+                                            <li>5. Select the downloaded CSV file</li>
+                                            <li>6. Your reading list is now imported into Shelf Scan!</li>
                                         </ol>
                                     </div>
                                 </div>
