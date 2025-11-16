@@ -41,7 +41,7 @@ function App() {
   
 
 
-  const { user, signOut, loading: authLoading } = useAuth();
+  const { user, session signOut, loading: authLoading } = useAuth();
   const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
   // Check backend health on mount
@@ -386,7 +386,7 @@ const topThreeBooks = displayBooks.slice(0, 3);
                         )}
                         <span>
                           <button
-                              onClick={() => openDeleteHistory(scan)}
+                              onClick={() => setShowDeleteHistory(true)}
                               className="min-h-[44px] text-blue-600 hover:text-blue-800 underline font-medium cursor-pointer touch-manipulation flex items-center"
                           >
                                   Delete
@@ -839,7 +839,7 @@ const topThreeBooks = displayBooks.slice(0, 3);
       <DeleteHistory
         isOpen={showDeleteHistory}
         onClose={() => setShowProfileModal(false)}
-        scan={scan}
+        scan={scanHistory}
         onDelete={handleDeleteScan}
         />
       <HelpButton />
