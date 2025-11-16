@@ -14,6 +14,7 @@ import PwChangeModal from './PwChangeModal';
 import HelpButton from "./HelpButton";
 import PrivacyModal from './PrivacyModal';
 import ProfileModal from './ProfileModal';
+import DeleteHistory from './DeleteHistory';
 
 
 function App() {
@@ -36,6 +37,7 @@ function App() {
   const [showPwChangeModal, setShowPwChangeModal] = useState(false); 
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false); 
+  const [showDeleteHistory, setShowDeleteHistory] = useState(false);
   
 
 
@@ -227,6 +229,10 @@ function App() {
     setSelectedBook(bookData);
     setShowDescriptModal(true);
 };
+  const openDeleteHistory = (scan) => {
+    setDeleteHistory(scan);
+    setShowDeleteHistory(true);
+};    
 
 const topThreeBooks = displayBooks.slice(0, 3);
 
@@ -345,6 +351,14 @@ const topThreeBooks = displayBooks.slice(0, 3);
                             +{scan.books.length - 3} more
                           </span>
                         )}
+                        <span>
+                          <button
+                              onClick={() => openDeleteHistory(scan)}
+                              className="min-h-[44px] text-blue-600 hover:text-blue-800 underline font-medium cursor-pointer touch-manipulation flex items-center"
+                          >
+                                  Delete
+                          </button>
+                        </span>
                       </div>
                     </div>
                   ))}
@@ -788,6 +802,12 @@ const topThreeBooks = displayBooks.slice(0, 3);
       <ProfileModal
         isOpen={showProfileModal}
         onClose={() => setShowProfileModal(false)}
+        />
+      <DeleteHistory
+        isOpen={showDeleteHistory}
+        onClose={() => setShowProfileModal(false)}
+        scan={scan}
+        onDelete={handleDeleteScan}
         />
       <HelpButton />
     </>
