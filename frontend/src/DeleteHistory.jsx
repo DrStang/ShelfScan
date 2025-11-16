@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import Trash2 from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 
 function DeleteHistory({ scan, onDelete }) {
   const [isDeleting, setIsDeleting] = useState(false);
