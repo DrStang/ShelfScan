@@ -46,11 +46,11 @@ function DeleteHistory({ scan, onDelete }) {
           <button
             onClick={handleDelete}
             disabled={isDeleting}
-            className="flex-1 px-4 py-3 bg-red-600 text-white rounded-lg font-semibod hover:bg-red-700 flex items-center justify-center gap-2"
+            className="flex-1 px-4 py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 flex items-center justify-center gap-2"
           >
             {isDeleting ? (
                 <>
-                    <div className"w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"> </div>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"> </div>
                     Deleting...
                 </>
             ) : (
