@@ -41,7 +41,7 @@ function App() {
   
 
 
-  const { user, session signOut, loading: authLoading } = useAuth();
+  const { user, session, signOut, loading: authLoading } = useAuth();
   const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
   // Check backend health on mount
