@@ -234,6 +234,39 @@ function App() {
     setShowDeleteHistory(true);
 };    
 
+  const handleDeleteScan = async (scanId) => {
+    try {
+      const token = session?.access_token;
+      if (!token) {
+        throw new Error('Not authenticated');
+      }
+
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/scans/${scanId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to delete scan');
+      }
+
+      // Remove the scan from local state
+      setScanHistory(prevHistory => prevHistory.filter(scan => scan.id !== scanId));
+
+      // Optional: Show success feedback
+      console.log('Scan deleted successfully');
+
+    } catch (error) {
+      console.error('Error deleting scan:', error);
+      alert('Failed to delete scan. Please try again.');
+      throw error;
+    }
+  };
+
 const topThreeBooks = displayBooks.slice(0, 3);
 
   return (
