@@ -229,10 +229,6 @@ function App() {
     setSelectedBook(bookData);
     setShowDescriptModal(true);
 };
-  const openDeleteHistory = (scan) => {
-    setDeleteHistory(scan);
-    setShowDeleteHistory(true);
-};    
 
   const handleDeleteScan = async (scanId) => {
     try {
