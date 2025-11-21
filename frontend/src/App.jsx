@@ -799,7 +799,7 @@ const topThreeBooks = displayBooks.slice(0, 3);
             <div className="mt-6 pt-4 border-t border-gray-200">
               <div className="flex flex-col md:flex-row items-center justify-between gap-3 text-xs text-gray-500">
                 <span>© 2025 Shelf Scan. All rights reserved.</span>
-                <div className="flex items-center justify-center gap-15px">
+                <div className="flex flex-col items-center justify-center gap-15px">
                   <a href="https://apps.apple.com/us/app/shelf-scan-book-spine-scanner/id6754824642"
                     class="inline-block"
                     target="_blank"
