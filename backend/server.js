@@ -49,16 +49,21 @@ let isRedisReady = false;
 
 (async () => {
   try {
+    console.log('🔌 Initializing Redis connection...');
     // Redis connection - works with Upstash Redis or local Redis
     redisClient = redis.createClient({
       url: process.env.REDIS_URL || 'redis://localhost:6379',
       socket: {
+        keepAlive: 30000,
+        connectTimeout: 10000,
         reconnectStrategy: (retries) => {
-          if (retries > 3) {
+          if (retries > 10) {
             console.log('❌ Redis: Too many retries, giving up');
             return new Error('Too many retries');
           }
-          return retries * 1000;
+          const delay = Math.min(Math.pow(2, retries) * 1000, 30000);
+          console.log(`🔄 Redis: Reconnecting in ${delay}ms (attempt ${retries + 1}/10)`);
+          return delay;
         }
       }
     });
@@ -73,11 +78,36 @@ let isRedisReady = false;
       isRedisReady = true;
     });
 
+    redisClient.on('reconnecting', () => {
+      console.log('🔄 Redis: Attempting to reconnect...');
+      isRedisReady = false;
+    });
+
+    redisClient.on('end', () => {
+      console.log('⚠️  Redis: Connection ended');
+      isRedisReady = false;
+    });
+
+    redisClient.on('connect', () => {
+      console.log('🔌 Redis: Socket connected');
+    });
+    
     await redisClient.connect();
-  } catch (err) {
-    console.warn('⚠️  Redis not available, caching disabled:', err.message);
-    isRedisReady = false;
-  }
+
+    setInterval(async () => {
+      if (isRedisReady) {
+        try {
+          await redisClient.ping();
+          console.log('🏓 Redis: Keepalive ping successful');
+      } catch (err) {
+        console.error('⚠️  Redis: Keepalive ping failed:', err.message);
+      }  
+    }
+  }, 4 * 60 * 60 * 1000);
+} catch (err) {
+  console.warn('⚠️  Redis not available, caching disabled:', err.message);
+  isRedisReady = false;
+  }    
 })();
 
 // Middleware
@@ -124,7 +154,9 @@ app.get('/api/health', (req, res) => {
 
 // Helper function to get from cache
 async function getFromCache(key) {
-  if (!isRedisReady) return null;
+  if (!isRedisReady || !redisClient) {
+    return null;
+  }  
   try {
     const data = await redisClient.get(key);
     return data ? JSON.parse(data) : null;
@@ -136,7 +168,10 @@ async function getFromCache(key) {
 
 // Helper function to set cache (30 days expiry)
 async function setCache(key, value, expirySeconds = 2592000) {
-  if (!isRedisReady) return;
+  if (!isRedisReady || !redisClient) {
+    return;
+  }
+  
   try {
     await redisClient.setEx(key, expirySeconds, JSON.stringify(value));
   } catch (err) {
@@ -1165,8 +1200,26 @@ app.use((req, res) => {
 // Graceful shutdown
 process.on('SIGINT', async () => {
   console.log('\nShutting down gracefully...');
-  if (redisClient) {
-    await redisClient.quit();
+  if (redisClient && isRedisReady) {
+    try {
+      await redisClient.quit();
+      console.log('✅ Redis connection closed');
+    } catch (err) {
+      console.error('Error closing Redis:', err);
+    }
+  }
+  process.exit(0);
+});
+
+process.on('SIGTERM', async () => {
+  console.log('\nReceived SIGTERM, shutting down gracefully...');
+  if (redisClient && isRedisReady) {
+    try {
+      await redisClient.quit();
+      console.log('✅ Redis connection closed');
+    } catch (err) {
+      console.error('Error closing Redis:', err);
+    }
   }
   process.exit(0);
 });
