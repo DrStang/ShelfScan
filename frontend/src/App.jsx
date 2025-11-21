@@ -799,6 +799,16 @@ const topThreeBooks = displayBooks.slice(0, 3);
             <div className="mt-6 pt-4 border-t border-gray-200">
               <div className="flex flex-col md:flex-row items-center justify-between gap-3 text-xs text-gray-500">
                 <span>© 2025 Shelf Scan. All rights reserved.</span>
+                <div className="flex items-center justify-center gap-15px">
+                  <a href="App store link"
+                    class="inline-block"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Download on the App Store">
+                      <img src="https://tools.applemediaservices.com/api/badges/download-on-the-app-store/black/en-us?size=250x83" 
+                          alt="Download on the App Store"
+                   </a>      
+                 </div>
                 <div className="flex items-center gap-3">
                   <span>Powered by OpenAI Vision</span>
                 </div>
