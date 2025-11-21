@@ -729,7 +729,7 @@ const topThreeBooks = displayBooks.slice(0, 3);
 
         {/* Enhanced Footer with More Options */}
       <footer className="mt-16 pb-8">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-6xl mx-auto">
           <div className="bg-white rounded-lg shadow-sm p-6">
             {/* Main Disclosure */}
             <div className="text-center mb-6">
@@ -800,7 +800,7 @@ const topThreeBooks = displayBooks.slice(0, 3);
               <div className="flex flex-col md:flex-row items-center justify-between gap-3 text-xs text-gray-500">
                 <span>© 2025 Shelf Scan. All rights reserved.</span>
                 <div className="flex items-center justify-center gap-15px">
-                  <a href="App store link"
+                  <a href="https://apps.apple.com/us/app/shelf-scan-book-spine-scanner/id6754824642"
                     class="inline-block"
                     target="_blank"
                     rel="noopener noreferrer"
