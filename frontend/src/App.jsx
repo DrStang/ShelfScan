@@ -806,7 +806,7 @@ const topThreeBooks = displayBooks.slice(0, 3);
                     rel="noopener noreferrer"
                     aria-label="Download on the App Store">
                       <img src="https://tools.applemediaservices.com/api/badges/download-on-the-app-store/black/en-us?size=250x83" 
-                          alt="Download on the App Store"
+                          alt="Download on the App Store">
                    </a>      
                  </div>
                 <div className="flex items-center gap-3">
