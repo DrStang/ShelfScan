@@ -356,8 +356,8 @@ Due to Goodreads restrictions, your library cannot be directly connected here an
         <ol className="text-blue-800 space-y-1 ml-4 list-decimal text-xs">
           <li>Open <a href="https://www.goodreads.com/review/import" target="_blank" rel="noopener noreferrer" className="underline font-medium">Goodreads Export</a> in a new tab</li>
           <li>Tap "Export Library"</li>
-          <li>Your CSV will open in the browser (like your screenshot)</li>
-          <li>Tap "Select All" from browser menu (or press and hold to select)</li>
+          <li>Download the generated CSV and open it, or open the generated file in the browser</li>
+          <li>Select ALL the data in the generated file</li>
           <li>Copy the entire page content</li>
           <li>Come back here and paste into the box below</li>
           <li>Tap "Import from Clipboard"</li>
