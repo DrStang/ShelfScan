@@ -996,6 +996,35 @@ app.delete('/api/reading-list', async (req, res) => {
     res.status(500).json({ error: 'An unexpected error occurred' });
   }
 });
+app.post('/api/auth/signin', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password required' });
+    }
+
+    // Use Supabase to authenticate
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
+
+    if (error) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    // Return token for the HTML page to use
+    res.json({
+      success: true,
+      token: data.session.access_token
+    });
+
+  } catch (error) {
+    console.error('Sign in error:', error);
+    res.status(500).json({ error: 'An unexpected error occurred' });
+  }
+});
 app.delete('/api/delete-account', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
