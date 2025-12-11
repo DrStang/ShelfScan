@@ -921,7 +921,201 @@ app.post('/api/import-goodreads-text', async (req, res) => {
   }
 });
 
+app.post('/api/scan-isbn', async (req, res) => {
+  try {
+    const { isbn, userId } = req.body;
 
+    if (!isbn) {
+      return res.status(400).json({ error: 'No ISBN provided' });
+    }
+    const cleanIsbn = isbn.replace(/[-\s]/g, '');
+
+    console.log(`Looking up ISBN: ${cleanIsbn}`);
+
+    const cacheKey = `isbn:${cleanIsbn}`;
+    const cached = await getFromCache(cacheKey);
+    if (cached) {
+      console.log(`✅ Cache hit for ISBN: ${cleanIsbn}`);
+
+      if (userId) {
+        const { data: readingList } = await supabase
+          .from('reading_list')
+          .select('*')
+          .eq('user_id', userId);
+
+        if (readingList) {
+          const match = checkReadingList(cached, readingList);
+          if (match) {
+            cached.inReadingList = true;
+            cached.readingListInfo = match;
+          }
+        }
+      }
+      return res.json({ success: true, book: cached });
+
+    }
+    // Query both APIs in parallel for fastest response
+    const [googleBook, openLibBook] = await Promise.all([
+      searchGoogleBooksByISBN(cleanIsbn),
+      searchOpenLibraryByISBN(cleanIsbn)
+    ]);
+
+    if (!googleBook && !openLibBook) {
+      return res.status(404).json({ 
+        error: 'Book not found',
+        isbn: cleanIsbn
+      });
+    }
+
+    // Merge data from both sources
+    const bookData = mergeBookData(
+      googleBook, 
+      openLibBook, 
+      googleBook?.title || openLibBook?.title || 'Unknown',
+      googleBook?.author || openLibBook?.author || 'Unknown'
+    );
+
+    if (!bookData) {
+      return res.status(404).json({ error: 'Could not retrieve book data' });
+    }
+
+    // Cache the result (30 days)
+    await setCache(cacheKey, bookData);
+
+    // Check reading list if userId provided
+    if (userId) {
+      const { data: readingList } = await supabase
+        .from('reading_list')
+        .select('*')
+        .eq('user_id', userId);
+      
+      if (readingList) {
+        const match = checkReadingList(bookData, readingList);
+        if (match) {
+          bookData.inReadingList = true;
+          bookData.readingListInfo = match;
+        }
+      }
+    }
+
+    console.log(`✅ Successfully fetched book by ISBN: ${bookData.title}`);
+
+    res.json({
+      success: true,
+      book: bookData
+    });
+
+  } catch (error) {
+    console.error('ISBN scan error:', error);
+    res.status(500).json({ 
+      error: 'An unexpected error occurred',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+// Helper function to search Google Books by ISBN
+async function searchGoogleBooksByISBN(isbn) {
+  try {
+    const response = await fetch(
+      `https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}`
+    );
+    
+    if (!response.ok) return null;
+    
+    const data = await response.json();
+
+    if (data.items && data.items.length > 0) {
+      const bookInfo = data.items[0].volumeInfo;
+      
+      return {
+        title: bookInfo.title,
+        author: bookInfo.authors?.[0],
+        rating: bookInfo.averageRating || 0,
+        ratingsCount: bookInfo.ratingsCount || 0,
+        description: bookInfo.description || '',
+        thumbnail: bookInfo.imageLinks?.thumbnail || null,
+        infoLink: bookInfo.infoLink || null,
+        isbn: isbn,
+        publishYear: bookInfo.publishedDate ? parseInt(bookInfo.publishedDate.substring(0, 4)) : null,
+        source: 'google'
+      };
+    }
+    return null;
+  } catch (error) {
+    console.error('Google Books ISBN lookup error:', error.message);
+    return null;
+  }
+}
+
+// Helper function to search Open Library by ISBN
+async function searchOpenLibraryByISBN(isbn) {
+  try {
+    const response = await fetch(
+      `https://openlibrary.org/isbn/${isbn}.json`
+    );
+    
+    if (!response.ok) return null;
+    
+    const book = await response.json();
+    
+    // Get author name if available
+    let authorName = 'Unknown';
+    if (book.authors && book.authors.length > 0) {
+      try {
+        const authorResponse = await fetch(
+          `https://openlibrary.org${book.authors[0].key}.json`
+        );
+        if (authorResponse.ok) {
+          const authorData = await authorResponse.json();
+          authorName = authorData.name;
+        }
+      } catch (e) {
+        console.log('Could not fetch author name');
+      }
+    }
+    
+    // Try to get ratings
+    let rating = 0;
+    let ratingsCount = 0;
+    
+    if (book.works && book.works.length > 0) {
+      try {
+        const workKey = book.works[0].key;
+        const ratingsResponse = await fetch(
+          `https://openlibrary.org${workKey}/ratings.json`
+        );
+        
+        if (ratingsResponse.ok) {
+          const ratingsData = await ratingsResponse.json();
+          if (ratingsData.summary && ratingsData.summary.average) {
+            rating = ratingsData.summary.average;
+            ratingsCount = ratingsData.summary.count || 0;
+          }
+        }
+      } catch (e) {
+        console.log('Could not fetch Open Library ratings');
+      }
+    }
+    
+    return {
+      title: book.title,
+      author: authorName,
+      rating: rating,
+      ratingsCount: ratingsCount,
+      description: book.description?.value || book.description || '',
+      thumbnail: book.covers?.[0] 
+        ? `https://covers.openlibrary.org/b/id/${book.covers[0]}-M.jpg`
+        : null,
+      isbn: isbn,
+      publishYear: book.publish_date ? parseInt(book.publish_date) : null,
+      source: 'openlibrary'
+    };
+  } catch (error) {
+    console.error('Open Library ISBN lookup error:', error.message);
+    return null;
+  }
+}
 
 // Get reading list endpoint
 app.get('/api/reading-list', async (req, res) => {
