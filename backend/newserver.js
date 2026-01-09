@@ -110,6 +110,33 @@ let isRedisReady = false;
   isRedisReady = false;
   }    
 })();
+let mariaPool;
+let isMariaReady = false;
+
+(async () => {
+  try {
+    console.log('🔌 Initializing MariaDB connection...');
+    mariaPool = mariadb.createPool({
+      host: process.env.DB_HOST,
+      user: process.env.DB_USER,
+      password: process.env.DB_PASS,
+      database: process.env.DB_NAME || 'Goodreads',
+      connectionLimit: 10,
+      acquireTimeout: 10000,
+      idleTimeout: 6000,
+    });
+
+    const conn = await mariaPool.getConnection();
+    await conn.ping()
+    conn.release();
+
+    isMariaReady = true;
+    console.log('✅ MariaDB: Connected and ready');
+  } catch (err) {
+    console.warn('⚠️  MariaDB not available, Goodreads ratings disabled:', err.message);
+    isMariaReady = false;
+  }
+})();
 
 // Middleware
 app.use(express.json({ limit: '10mb' }));
@@ -149,7 +176,8 @@ app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'ok', 
     timestamp: new Date().toISOString(),
-    redis: isRedisReady ? 'connected' : 'disconnected'
+    redis: isRedisReady ? 'connected' : 'disconnected',
+    mariadb: isMariaReady ? 'connected' : 'disconnected'
   });
 });
 
@@ -290,58 +318,90 @@ async function searchGoogleBooks(title, author) {
   }
 }
 async function searchGoodreadsDB(title, author, isbn = null) {
-  pool = mariadb.createPool({
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASS,
-    database: 'Goodreads',
-    connectionLimit: 5
-  });
+  if (!isMariaReady || !mariaPool) {
+    console.log('⚠️  MariaDB not available, skipping Goodreads lookup');
+    return null;
+  }  
   
   let conn;
   try {
+    conn = await mariaPool.getConnection();
     if (isbn) {
       const cleanIsbn = isbn.replace(/[-\s]/g, '');
-      conn = await pool.getConnection();
-      const query = 'SELECT star_rating, num_ratings FROM Scrape WHERE isbn = ?';
-
-      const rows = await conn.query(query, [cleanIsbn]);
-      if (rows.length === 0) {
-        return null;
+      let query = 'SELECT star_rating, num_ratings FROM Scrape WHERE isbn = ? LIMIT 1';
+      let rows = await conn.query(query, [cleanIsbn]);
+       // If no match and it's ISBN-13, try converting to ISBN-10
+      if (rows.length === 0 && cleanIsbn.length === 13) {
+        const isbn10 = isbn13to10(cleanIsbn);
+        if (isbn10) {
+          console.log(`🔄 No match for ISBN-13 ${cleanIsbn}, trying ISBN-10 ${isbn10}`);
+          rows = await conn.query(query, [isbn10]);
+        }
       }
-      const row = rows[0];
-      console.log(`Rating: ${row.star_rating}, Rating_Count: ${row.num_ratings}`);
-
-      return {
-        rating: row.star_rating,
-        ratingsCount: row.num_ratings,
-        source: 'goodreads'
-      };
-    }
-    conn = await pool.getConnection();
-    const query = 'SELECT star_rating, num_ratings FROM Scrape WHERE name = ? AND author =?';
-
-    const rows = await conn.query(query, [title, author]);
-
-    if (rows.length === 0) {
-      return null;
-    }
-
-    const row = rows[0];
-    return {
-      rating: row.start_rating,
-      ratingsCount: row.num_ratings,
-      source: 'goodreads'
-    };    
+      
+      // If no match and it's ISBN-10, try converting to ISBN-13
+      if (rows.length === 0 && cleanIsbn.length === 10) {
+        const isbn13 = isbn10to13(cleanIsbn);
+        if (isbn13) {
+          console.log(`🔄 No match for ISBN-10 ${cleanIsbn}, trying ISBN-13 ${isbn13}`);
+          rows = await conn.query(query, [isbn13]);
+        }
+      }
+      
+      
+      if (rows.length > 0) {
+        const row = rows[0];
+        console.log(`✅ Goodreads DB match by ISBN: ${cleanIsbn} - Rating: ${row.star_rating}`);
+        return null {
+          rating: parseFloat(row.star_rating) || 0,
+          ratingsCount: parseInt(row.num_ratings) || 0,
+          source: 'goodreads' 
+        };
+      }
+    }  
+    if (title && author) {
+      const query = 'SELECT star_rating, num_ratings FROM Scrape WHERE name = ? AND author =? LIMIT 1';
+      let rows = await conn.query(query, [title, author]);
+  
+      if (rows.length === 0) {
+        const fuzzyQuery = 'SELECT star_rating, num_ratings FROM Scrape WHERE name LIKE ? AND author LIKE ? LIMIT 1';
+        rows = await conn.query(fuzzyQuery, [`%${title}%`, `%${author}%`]);
+      }
+  
+      if (rows.length > 0) {
+        const row = rows[0];
+        console.log(`✅ Goodreads DB match by title/author: "${title}" - Rating: ${row.star_rating}`);
+        return {
+          rating: parseFloat(row.star_rating) || 0,
+          ratingsCount: parseInt(row.num_ratings) || 0,
+          source: 'goodreads'
+        };    
+      }
+    }    
+    console.log(`❌ No Goodreads match for: "${title}" by ${author}`);
+    return null;
+    
   } catch (err) {
-    console.error("Error occurred with Goodreads Rating Retrieval:", err);
-    throw err;
+    console.error("Error occurred with Goodreads Rating Retrieval:", err.message);
+    return null;
   } finally {
     if (conn) {
       conn.release();
     }
   }
 }  
+function isbn10to13(isbn10) {
+  if (!isbn10 || isbn10.length !==10) return null;
+  const base = '978' + isbn10.substring(0,9);
+
+  let sum = 0;
+  for (let i = 0; i < 12; i ++) {
+    sum += parseInt(base[i]) * (i % 2 === 0 ? 1 : 3);
+  }
+  const checksum = (10 - (sum % 10)) % 10;
+  return base + checksum.toString();
+}  
+  
     
       
 
@@ -1493,6 +1553,359 @@ process.on('SIGINT', async () => {
       console.error('Error closing Redis:', err);
     }
   }
+  if (mariaPool) {
+    try {
+      await mariaPool.end();
+      spinescan/Combining Goodreads data with external book APIsi came across a large dataset of goodreads data (to include ratings)... how would we have the backed search google api (and openlibrary) for book description, image, etc. but then have it search the database for the ratings and ratings count?  most if not all of the data includes name, author, ratings, ratings count and isbnJan 7That's a great find! Using Goodreads data for ratings would give you much better rating data than Google Books or Open Library. Here's how I'd approach this:
+Architecture Overview
+The strategy is straightforward: query your Goodreads database first for ratings, then fall back to Google Books/Open Library only for metadata (description, cover image, etc.) that's missing.
+Database Setup
+First, you'd need to import that Goodreads dataset into a new table in Supabase:
+sqlCREATE TABLE goodreads_books (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  title TEXT NOT NULL,
+  author TEXT,
+  isbn TEXT,
+  isbn13 TEXT,
+  average_rating NUMERIC,
+  ratings_count INTEGER,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Indexes for fast lookups
+CREATE INDEX idx_goodreads_isbn ON goodreads_books(isbn);
+CREATE INDEX idx_goodreads_isbn13 ON goodreads_books(isbn13);
+CREATE INDEX idx_goodreads_title_author ON goodreads_books(LOWER(title), LOWER(author));
+Backend Changes
+The key modification is in your book lookup flow. Here's how the updated server.js would handle it:
+javascript// New helper function to search your Goodreads database
+async function searchGoodreadsDB(title, author, isbn = null) {
+  try {
+    // First try ISBN match (most accurate)
+    if (isbn) {
+      const cleanIsbn = isbn.replace(/[-\s]/g, '');
+      const { data, error } = await supabase
+        .from('goodreads_books')
+        .select('*')
+        .or(`isbn.eq.${cleanIsbn},isbn13.eq.${cleanIsbn}`)
+        .limit(1)
+        .single();
+      
+      if (!error && data) {
+        console.log(`✅ Goodreads DB match by ISBN: ${title}`);
+        return {
+          rating: data.average_rating,
+          ratingsCount: data.ratings_count,
+          source: 'goodreads'
+        };
+      }
+    }
+    
+    // Fall back to title + author match
+    const { data, error } = await supabase
+      .from('goodreads_books')
+      .select('*')
+      .ilike('title', `%${title}%`)
+      .ilike('author', `%${author}%`)
+      .limit(1)
+      .single();
+    
+    if (!error && data) {
+      console.log(`✅ Goodreads DB match by title/author: ${title}`);
+      return {
+        rating: data.average_rating,
+        ratingsCount: data.ratings_count,
+        source: 'goodreads'
+      };
+    }
+    
+    return null;
+  } catch (err) {
+    console.error('Goodreads DB search error:', err.message);
+    return null;
+  }
+}
+
+// Updated mergeBookData function
+function mergeBookData(googleBook, openLibBook, goodreadsRating, originalTitle, originalAuthor) {
+  if (!googleBook && !openLibBook) return null;
+  
+  // Priority for ratings: Goodreads DB > Google Books > Open Library
+  let rating = 0;
+  let ratingsCount = 0;
+  let ratingSource = 'No ratings available';
+
+  if (goodreadsRating?.rating > 0) {
+    rating = goodreadsRating.rating;
+    ratingsCount = goodreadsRating.ratingsCount;
+    ratingSource = `Goodreads (${ratingsCount.toLocaleString()} ratings)`;
+  } else if (googleBook?.rating > 0) {
+    rating = googleBook.rating;
+    ratingsCount = googleBook.ratingsCount;
+    ratingSource = `Google Books (${ratingsCount.toLocaleString()} reviews)`;
+  } else if (openLibBook?.rating > 0) {
+    rating = openLibBook.rating;
+    ratingsCount = openLibBook.ratingsCount;
+    ratingSource = `Open Library (${ratingsCount.toLocaleString()} reviews)`;
+  }
+
+  // Use Google Books for metadata (description, thumbnail, etc.)
+  const primary = googleBook || openLibBook || {};
+  const secondary = openLibBook || googleBook || {};
+  const isbn = primary.isbn || secondary.isbn;
+  
+  // ... rest of your existing mergeBookData logic for Amazon URL, etc.
+  
+  return {
+    title: primary.title || originalTitle,
+    author: primary.author || originalAuthor,
+    rating: rating,
+    ratingsCount: ratingsCount,
+    ratingSource: ratingSource,
+    description: primary.description || secondary.description || 'No description available',
+    thumbnail: primary.thumbnail || secondary.thumbnail || null,
+    // ... rest of fields
+  };
+}
+Then update your book processing loop in the /api/scan endpoint:
+javascriptconst bookPromises = extractedBooks.map(async (book) => {
+  try {
+    const cacheKey = `book:${book.title.toLowerCase()}:${book.author.toLowerCase()}`;
+    
+    const cached = await getFromCache(cacheKey);
+    if (cached) {
+      console.log(`✅ Cache hit: ${book.title}`);
+      return cached;
+    }
+    
+    // Query all sources in parallel
+    const [googleBook, openLibBook] = await Promise.all([
+      searchGoogleBooks(book.title, book.author),
+      searchOpenLibrary(book.title, book.author)
+    ]);
+    
+    // Get ISBN from Google/OpenLib first, then search Goodreads DB
+    const isbn = googleBook?.isbn || openLibBook?.isbn;
+    const goodreadsRating = await searchGoodreadsDB(book.title, book.author, isbn);
+    
+    const mergedData = mergeBookData(googleBook, openLibBook, goodreadsRating, book.title, book.author);
+    
+    if (mergedData) {
+      await setCache(cacheKey, mergedData);
+    }
+    
+    return mergedData;
+  } catch (e) {
+    console.error(`Error fetching book info for "${book.title}":`, e.message);
+    return null;
+  }
+});
+Data Import Script
+For importing your Goodreads dataset, you'd create a simple Node script:
+javascript// import-goodreads.js
+const { createClient } = require('@supabase/supabase-js');
+const fs = require('fs');
+const Papa = require('papaparse');
+
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_KEY
+);
+
+async function importGoodreadsData(filepath) {
+  const csvText = fs.readFileSync(filepath, 'utf-8');
+  const { data } = Papa.parse(csvText, { header: true, skipEmptyLines: true });
+  
+  console.log(`Importing ${data.length} books...`);
+  
+  const batchSize = 1000;
+  for (let i = 0; i < data.length; i += batchSize) {
+    const batch = data.slice(i, i + batchSize).map(row => ({
+      title: row.title || row.Title,
+      author: row.authors || row.Author,
+      isbn: row.isbn || row.ISBN,
+      isbn13: row.isbn13 || row.ISBN13,
+      average_rating: parseFloat(row.average_rating || row['Average Rating']) || null,
+      ratings_count: parseInt(row.ratings_count || row['Ratings Count']) || null
+    })).filter(b => b.title && b.average_rating);
+    
+    const { error } = await supabase.from('goodreads_books').insert(batch);
+    if (error) console.error('Batch error:', error);
+    else console.log(`Imported ${i + batch.length} / ${data.length}`);
+  }
+}
+
+importGoodreadsData('./goodreads_data.csv');
+Considerations
+A few things to think about:
+
+Dataset size: How large is the dataset? Supabase free tier has 500MB, but that should handle millions of books if you're just storing title/author/ISBN/ratings.
+Matching accuracy: ISBN matching is most reliable. Title/author matching can be tricky due to variations ("The Hobbit" vs "Hobbit, The"). You might want fuzzy matching with pg_trgm extension if exact matches aren't finding enough books.
+Caching: Your Redis cache will help a lot here since the Goodreads data won't change. Once a book is looked up and merged, it's cached for 30 days.
+
+Would you like me to write out the complete updated server.js with these changes integrated, or help with the import script for your specific dataset format?// server.js - Backend API for Book Spine Scanner
+const express = require('express');
+const cors = require('cors');
+const rateLimit = require('express-rate-limit'); 
+const redis = require('redis');
+const fetch = require('node-fetch');
+const { createClient } = require('@supabase/supabase-js');
+pasteddata is too large to put on supabase so i'll put it on a mariadb DB.  take a look at this server.js and suggest changes that may be necessary for functionality4:36 PMLooking at your server.js, I can see you've already started implementing the searchGoodreadsDB function with MariaDB, but there are several issues that need to be fixed for it to work properly.
+Issues I Found
+
+Missing mariadb import - You use mariadb.createPool() but never imported the package
+Pool created inside the function - Creates a new connection pool on every call (very inefficient)
+Typo in the title/author query - row.start_rating should be row.star_rating
+Pool never gets closed - The pool variable is scoped inside the function
+No fallback if MariaDB is unavailable - The app would crash
+
+Recommended Changes
+Here's the corrected implementation:
+javascript// Add at the top with other requires
+const mariadb = require('mariadb');
+
+// Create pool once at startup (after the Redis setup, around line 100)
+let mariaPool;
+let isMariaReady = false;
+
+(async () => {
+  try {
+    console.log('🔌 Initializing MariaDB connection...');
+    mariaPool = mariadb.createPool({
+      host: process.env.DB_HOST,
+      user: process.env.DB_USER,
+      password: process.env.DB_PASS,
+      database: process.env.DB_NAME || 'Goodreads',
+      connectionLimit: 10,
+      acquireTimeout: 10000,
+      idleTimeout: 60000,
+    });
+    
+    // Test the connection
+    const conn = await mariaPool.getConnection();
+    await conn.ping();
+    conn.release();
+    
+    isMariaReady = true;
+    console.log('✅ MariaDB: Connected and ready');
+  } catch (err) {
+    console.warn('⚠️  MariaDB not available, Goodreads ratings disabled:', err.message);
+    isMariaReady = false;
+  }
+})();
+Then replace your searchGoodreadsDB function:
+javascriptasync function searchGoodreadsDB(title, author, isbn = null) {
+  if (!isMariaReady || !mariaPool) {
+    console.log('⚠️  MariaDB not available, skipping Goodreads lookup');
+    return null;
+  }
+  
+  let conn;
+  try {
+    conn = await mariaPool.getConnection();
+    
+    // First try ISBN match (most accurate)
+    if (isbn) {
+      const cleanIsbn = isbn.replace(/[-\s]/g, '');
+      const query = 'SELECT star_rating, num_ratings FROM Scrape WHERE isbn = ? LIMIT 1';
+      const rows = await conn.query(query, [cleanIsbn]);
+      
+      if (rows.length > 0) {
+        const row = rows[0];
+        console.log(`✅ Goodreads DB match by ISBN: ${cleanIsbn} - Rating: ${row.star_rating}`);
+        return {
+          rating: parseFloat(row.star_rating) || 0,
+          ratingsCount: parseInt(row.num_ratings) || 0,
+          source: 'goodreads'
+        };
+      }
+    }
+    
+    // Fall back to title + author match
+    if (title && author) {
+      // Try exact match first
+      const exactQuery = 'SELECT star_rating, num_ratings FROM Scrape WHERE name = ? AND author = ? LIMIT 1';
+      let rows = await conn.query(exactQuery, [title, author]);
+      
+      // If no exact match, try fuzzy match with LIKE
+      if (rows.length === 0) {
+        const fuzzyQuery = 'SELECT star_rating, num_ratings FROM Scrape WHERE name LIKE ? AND author LIKE ? LIMIT 1';
+        rows = await conn.query(fuzzyQuery, [`%${title}%`, `%${author}%`]);
+      }
+      
+      if (rows.length > 0) {
+        const row = rows[0];
+        console.log(`✅ Goodreads DB match by title/author: "${title}" - Rating: ${row.star_rating}`);
+        return {
+          rating: parseFloat(row.star_rating) || 0,
+          ratingsCount: parseInt(row.num_ratings) || 0,
+          source: 'goodreads'
+        };
+      }
+    }
+    
+    console.log(`❌ No Goodreads match for: "${title}" by ${author}`);
+    return null;
+    
+  } catch (err) {
+    console.error('Goodreads DB search error:', err.message);
+    return null;
+  } finally {
+    if (conn) {
+      conn.release();
+    }
+  }
+}
+Update package.json
+Add the mariadb dependency:
+json{
+  "dependencies": {
+    "mariadb": "^3.2.0"
+  }
+}
+```
+
+## Environment Variables
+
+Add these to your Railway environment:
+```
+DB_HOST=your-mariadb-host.com
+DB_USER=your_username
+DB_PASS=your_password
+DB_NAME=Goodreads
+Update Health Check
+Update your health endpoint to include MariaDB status:
+javascriptapp.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    redis: isRedisReady ? 'connected' : 'disconnected',
+    mariadb: isMariaReady ? 'connected' : 'disconnected'
+  });
+});
+Update Graceful Shutdown
+Add MariaDB cleanup to your shutdown handlers:
+javascriptprocess.on('SIGINT', async () => {
+  console.log('\nShutting down gracefully...');
+  
+  if (redisClient && isRedisReady) {
+    try {
+      await redisClient.quit();
+      console.log('✅ Redis connection closed');
+    } catch (err) {
+      console.error('Error closing Redis:', err);
+    }
+  }
+  
+  if (mariaPool) {
+    try {
+      await mariaPool.end();
+      console.log('✅ MariaDB connection pool closed');
+    } catch (err) {
+      console.error('Error closing MariaDB:', err);
+    }
+  }  
+      
   process.exit(0);
 });
 
@@ -1506,6 +1919,14 @@ process.on('SIGTERM', async () => {
       console.error('Error closing Redis:', err);
     }
   }
+  if (mariaPool) {
+    try {
+      await mariaPool.end();
+      console.log('✅ MariaDB connection pool closed');
+    } catch (err) {
+      console.error('Error closing MariaDB:', err);
+    }
+  }  
   process.exit(0);
 });
 
