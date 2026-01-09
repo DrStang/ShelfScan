@@ -121,6 +121,7 @@ let isMariaReady = false;
       user: process.env.DB_USER,
       password: process.env.DB_PASS,
       database: process.env.DB_NAME || 'Goodreads',
+      port: process.env.DB_PORT,
       connectionLimit: 10,
       acquireTimeout: 10000,
       idleTimeout: 6000,
