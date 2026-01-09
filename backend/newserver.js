@@ -7,6 +7,7 @@ const fetch = require('node-fetch');
 const { createClient } = require('@supabase/supabase-js');
 const Papa = require('papaparse');
 const multer = require('multer');
+const mariadb = require('mariadb');
 
 require('dotenv').config();
 
