@@ -353,7 +353,7 @@ async function searchGoodreadsDB(title, author, isbn = null) {
       if (rows.length > 0) {
         const row = rows[0];
         console.log(`✅ Goodreads DB match by ISBN: ${cleanIsbn} - Rating: ${row.star_rating}`);
-        return null {
+        return {
           rating: parseFloat(row.star_rating) || 0,
           ratingsCount: parseInt(row.num_ratings) || 0,
           source: 'goodreads' 
