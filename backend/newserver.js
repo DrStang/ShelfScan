@@ -123,8 +123,10 @@ let isMariaReady = false;
       database: process.env.DB_NAME || 'Goodreads',
       port: process.env.DB_PORT,
       connectionLimit: 10,
-      acquireTimeout: 10000,
-      idleTimeout: 6000,
+      acquireTimeout: 5000,
+      connectTimeout: 5000,
+      idleTimeout: 30000,
+      minimumIdle: 2,
     });
 
     const conn = await mariaPool.getConnection();
@@ -318,7 +320,35 @@ async function searchGoogleBooks(title, author) {
     return null;
   }
 }
-async function searchGoodreadsDB(title, author, isbn = null) {
+async function warmCache() {
+  const conn = await mariaPool.getConnection();
+  const rows = await conn.query(
+    'SELECT isbn, star_rating, num_ratings FROM Scrape WHERE num_ratings > 1000 ORDER BY num_ratings DESC LIMIT 100000'
+  );
+  for (const row of rows) {
+    await setCache(`goodreads:${row.isbn}`, {
+      rating: parseFloat(row.star_rating),
+      ratingsCount: parseInt(row.num_ratings),
+      source: 'goodreads'
+    }, 86400 * 90);
+  }
+  conn.release();
+}  
+    
+async function searchGoodreadsDB(isbn) {
+  if (!isbn) return null;
+
+  const cleanIsbn = isbn.replace(/[-\s]/g, '');
+
+  const cached = await getFromCache(`goodreads:${cleanIsbn}`);
+  if (cached) return cached;
+
+  const variant = cleanIsbn.length === 13 ? isbn13to10(cleanIsbn) : isbn10to13(cleanIsbn);
+  if (variant) {
+    const cachedVariant = await getFromCache(`goodreads:${variant}`);
+    if (cachedVariant) return cachedVariant;
+  }
+
   if (!isMariaReady || !mariaPool) {
     console.log('⚠️  MariaDB not available, skipping Goodreads lookup');
     return null;
@@ -329,26 +359,18 @@ async function searchGoodreadsDB(title, author, isbn = null) {
     conn = await mariaPool.getConnection();
     if (isbn) {
       const cleanIsbn = isbn.replace(/[-\s]/g, '');
-      let query = 'SELECT star_rating, num_ratings FROM Scrape WHERE isbn = ? LIMIT 1';
-      let rows = await conn.query(query, [cleanIsbn]);
-       // If no match and it's ISBN-13, try converting to ISBN-10
-      if (rows.length === 0 && cleanIsbn.length === 13) {
+      const isbnVariants = [cleanIsbn];
+
+      if (cleanIsbn.length === 13) {
         const isbn10 = isbn13to10(cleanIsbn);
-        if (isbn10) {
-          console.log(`🔄 No match for ISBN-13 ${cleanIsbn}, trying ISBN-10 ${isbn10}`);
-          rows = await conn.query(query, [isbn10]);
-        }
-      }
-      
-      // If no match and it's ISBN-10, try converting to ISBN-13
-      if (rows.length === 0 && cleanIsbn.length === 10) {
+        if (isbn10) isbnVariants.push(isbn10);
+      } else if (cleanIsbn.length === 10) {
         const isbn13 = isbn10to13(cleanIsbn);
-        if (isbn13) {
-          console.log(`🔄 No match for ISBN-10 ${cleanIsbn}, trying ISBN-13 ${isbn13}`);
-          rows = await conn.query(query, [isbn13]);
-        }
+        if (isbn13) isbnVariants.push(isbn13);
       }
       
+      const query = 'SELECT star_rating, num_ratings FROM Scrape WHERE isbn IN (?) LIMIT 1';
+      const rows = await conn.query(query, [isbnVariants]);
       
       if (rows.length > 0) {
         const row = rows[0];
@@ -360,7 +382,7 @@ async function searchGoodreadsDB(title, author, isbn = null) {
         };
       }
     }  
-    if (title && author) {
+    {/* if (title && author) {
       const query = 'SELECT star_rating, num_ratings FROM Scrape WHERE name = ? AND author =? LIMIT 1';
       let rows = await conn.query(query, [title, author]);
   
@@ -379,7 +401,7 @@ async function searchGoodreadsDB(title, author, isbn = null) {
         };    
       }
     }    
-    console.log(`❌ No Goodreads match for: "${title}" by ${author}`);
+    console.log(`❌ No Goodreads match for: "${title}" by ${author}`);*/}
     return null;
     
   } catch (err) {
@@ -683,7 +705,7 @@ app.post('/api/scan', async (req, res) => {
           searchOpenLibrary(book.title, book.author)
         ]);
         const isbn = googleBook?.isbn || openLibBook?.isbn;
-        const goodreadsRating = await searchGoodreadsDB(book.title, book.author, isbn);
+        const goodreadsRating = isbn ? await searchGoodreadsDB(isbn) : null;
         
         const mergedData = mergeBookData(googleBook, openLibBook, goodreadsRating, book.title, book.author);
         
