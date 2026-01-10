@@ -320,34 +320,30 @@ async function searchGoogleBooks(title, author) {
     return null;
   }
 }
-async function warmCache() {
-  const conn = await mariaPool.getConnection();
-  const rows = await conn.query(
-    'SELECT isbn, star_rating, num_ratings FROM Scrape WHERE num_ratings > 1000 ORDER BY num_ratings DESC LIMIT 100000'
-  );
-  for (const row of rows) {
-    await setCache(`goodreads:${row.isbn}`, {
-      rating: parseFloat(row.star_rating),
-      ratingsCount: parseInt(row.num_ratings),
-      source: 'goodreads'
-    }, 86400 * 90);
-  }
-  console.log("Caching Goodreads Reviews");
-  conn.release();
-}  
     
 async function searchGoodreadsDB(isbn) {
   if (!isbn) return null;
 
   const cleanIsbn = isbn.replace(/[-\s]/g, '');
+  const isbnVariants = [cleanIsbn];
 
-  const cached = await getFromCache(`goodreads:${cleanIsbn}`);
-  if (cached) return cached;
-
-  const variant = cleanIsbn.length === 13 ? isbn13to10(cleanIsbn) : isbn10to13(cleanIsbn);
-  if (variant) {
-    const cachedVariant = await getFromCache(`goodreads:${variant}`);
-    if (cachedVariant) return cachedVariant;
+  if (cleanIsbn.length === 13) {
+    const isbn10 = isbn13to10(cleanIsbn);
+    if (isbn10) isbnVariants.push(isbn10);
+  } else if (cleanIsbn.length === 10) {
+    const isbn13 = isbn10to13(cleanIsbn);
+    if (isbn13) isbnVariants.push(isbn13);
+  }
+  
+// Check Redis cache first (populated by warm-cache.js)
+  if (isRedisReady) {
+    for (const variant of isbnVariants) {
+      const cached = await getFromCache(`goodreads:${variant}`);
+      if (cached) {
+        console.log(`✅ Goodreads cache hit: ${variant}`);
+        return cached;
+      }
+    }
   }
 
   if (!isMariaReady || !mariaPool) {
@@ -358,31 +354,27 @@ async function searchGoodreadsDB(isbn) {
   let conn;
   try {
     conn = await mariaPool.getConnection();
-    if (isbn) {
-      const cleanIsbn = isbn.replace(/[-\s]/g, '');
-      const isbnVariants = [cleanIsbn];
-
-      if (cleanIsbn.length === 13) {
-        const isbn10 = isbn13to10(cleanIsbn);
-        if (isbn10) isbnVariants.push(isbn10);
-      } else if (cleanIsbn.length === 10) {
-        const isbn13 = isbn10to13(cleanIsbn);
-        if (isbn13) isbnVariants.push(isbn13);
-      }
+    
+    const query = 'SELECT star_rating, num_ratings FROM Scrape WHERE isbn IN (?) LIMIT 1';
+    const rows = await conn.query(query, [isbnVariants]);
       
-      const query = 'SELECT star_rating, num_ratings FROM Scrape WHERE isbn IN (?) LIMIT 1';
-      const rows = await conn.query(query, [isbnVariants]);
-      
-      if (rows.length > 0) {
-        const row = rows[0];
-        console.log(`✅ Goodreads DB match by ISBN: ${cleanIsbn} - Rating: ${row.star_rating}`);
-        return {
+    if (rows.length > 0) {
+      const row = rows[0];
+      const result = {
           rating: parseFloat(row.star_rating) || 0,
           ratingsCount: parseInt(row.num_ratings) || 0,
           source: 'goodreads' 
-        };
-      }
-    }  
+      };
+
+      if (isRedisReady) {
+        await setCache(`goodreads:${cleanIsbn}`, result, 86400 * 90);
+      }  
+      console.log(`✅ Goodreads DB hit: ${cleanIsbn} - ${result.rating}★`);
+      return result;
+    }
+    return null;
+
+      
     {/* if (title && author) {
       const query = 'SELECT star_rating, num_ratings FROM Scrape WHERE name = ? AND author =? LIMIT 1';
       let rows = await conn.query(query, [title, author]);
@@ -409,7 +401,7 @@ async function searchGoodreadsDB(isbn) {
     console.error("Error occurred with Goodreads Rating Retrieval:", err.message);
     return null;
   } finally {
-    if (conn) {
+    if (conn) { 
       conn.release();
     }
   }
