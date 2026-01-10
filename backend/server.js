@@ -332,6 +332,7 @@ async function warmCache() {
       source: 'goodreads'
     }, 86400 * 90);
   }
+  console.log("Caching Goodreads Reviews");
   conn.release();
 }  
     
@@ -400,8 +401,8 @@ async function searchGoodreadsDB(isbn) {
           source: 'goodreads'
         };    
       }
-    }    
-    console.log(`❌ No Goodreads match for: "${title}" by ${author}`);*/}
+    }*/}    
+    console.log(`❌ No Goodreads match for: "${cleanIsbn}`);
     return null;
     
   } catch (err) {
