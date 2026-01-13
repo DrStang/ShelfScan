@@ -372,7 +372,6 @@ async function searchGoodreadsDB(isbn) {
       console.log(`✅ Goodreads DB hit: ${cleanIsbn} - ${result.rating}★`);
       return result;
     }
-    return null;
 
       
     {/* if (title && author) {
