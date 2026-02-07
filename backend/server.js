@@ -124,7 +124,7 @@ let isMariaReady = false;
       port: process.env.DB_PORT,
       connectionLimit: 30,
       acquireTimeout: 5000,
-      connectTimeout: 5000,
+      connectTimeout: 15000,
       idleTimeout: 30000,
       minimumIdle: 2,
     });
