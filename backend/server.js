@@ -136,7 +136,7 @@ let isMariaReady = false;
     isMariaReady = true;
     console.log('✅ MariaDB: Connected and ready');
 
-    setInterval(async () => {
+    {/*setInterval(async () => {
       if (!mariaPool) return;
       try {
         const conn = await mariaPool.getConnection();
@@ -150,7 +150,7 @@ let isMariaReady = false;
         console.error('⚠️ MariaDB health check failed:', err.message);
         isMariaReady = false;
       }
-    }, 60000);  
+    }, 60000);  */}
   } catch (err) {
     console.warn('⚠️  MariaDB not available, Goodreads ratings disabled:', err.message);
     isMariaReady = false;
