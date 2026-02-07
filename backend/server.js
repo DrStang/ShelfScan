@@ -201,29 +201,6 @@ app.get('/api/health', (req, res) => {
       taskQueueSize: mariaPool.taskQueueSize()
     };
   }
-
-  app.get('/api/debug-db', async (req, res) => {
-  try {
-    const conn = await mariadb.createConnection({
-      host: process.env.DB_HOST,
-      user: process.env.DB_USER,
-      password: process.env.DB_PASS,
-      database: process.env.DB_NAME || 'Goodreads',
-      port: parseInt(process.env.DB_PORT),
-      connectTimeout: 10000
-    });
-    await conn.ping();
-    await conn.end();
-    res.json({ status: 'ok' });
-  } catch (err) {
-    res.json({ 
-      error: err.message, 
-      code: err.code,
-      host: process.env.DB_HOST,
-      port: process.env.DB_PORT
-    });
-  }
-});
   
   res.json({ 
     status: 'ok', 
@@ -646,6 +623,28 @@ function checkReadingList(book, readingList) {
   
   return null;
 }
+app.get('/api/debug-db', async (req, res) => {
+  try {
+    const conn = await mariadb.createConnection({
+      host: process.env.DB_HOST,
+      user: process.env.DB_USER,
+      password: process.env.DB_PASS,
+      database: process.env.DB_NAME || 'Goodreads',
+      port: parseInt(process.env.DB_PORT),
+      connectTimeout: 10000
+    });
+    await conn.ping();
+    await conn.end();
+    res.json({ status: 'ok' });
+  } catch (err) {
+    res.json({ 
+      error: err.message, 
+      code: err.code,
+      host: process.env.DB_HOST,
+      port: process.env.DB_PORT
+    });
+  }
+});
 
 // Main scan endpoint
 app.post('/api/scan', async (req, res) => {
