@@ -122,11 +122,12 @@ let isMariaReady = false;
       password: process.env.DB_PASS,
       database: process.env.DB_NAME || 'Goodreads',
       port: process.env.DB_PORT,
-      connectionLimit: 30,
-      acquireTimeout: 5000,
+      connectionLimit: 50,
+      acquireTimeout: 30000,
       connectTimeout: 15000,
-      idleTimeout: 30000,
-      minimumIdle: 2,
+      idleTimeout: 300000,
+      minPoolSize: 5,
+      leakDetectionTimeout: 30000
     });
 
     const conn = await mariaPool.getConnection();
@@ -135,6 +136,22 @@ let isMariaReady = false;
 
     isMariaReady = true;
     console.log('✅ MariaDB: Connected and ready');
+
+    setInterval(async () => {
+      if (!mariaPool) return;
+      try {
+        const conn = await mariaPool.getConnection();
+        await conn.ping();
+        conn.release();
+        if (!isMariaReady) {
+          isMariaReady = true;
+          console.log('✅ MariaDB: Reconnected');
+        }
+      } catch(err) {
+        console.error('⚠️ MariaDB health check failed:', err.message);
+        isMariaReady = false;
+      }
+    }, 60000);  
   } catch (err) {
     console.warn('⚠️  MariaDB not available, Goodreads ratings disabled:', err.message);
     isMariaReady = false;
@@ -176,11 +193,22 @@ app.use('/api/scan', apiLimiter);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
+  let mariaStats = null;
+  if (mariaPool) {
+    mariaStats = {
+      activeConnections: mariaPool.activeConnections(),
+      totalConnections: mariaPool.totalConnections(),
+      idleConnections: mariaPool.idleConnections(),
+      taskQueueSize: mariaPool.taskQueueSize()
+    };
+  }
+  
   res.json({ 
     status: 'ok', 
     timestamp: new Date().toISOString(),
     redis: isRedisReady ? 'connected' : 'disconnected',
-    mariadb: isMariaReady ? 'connected' : 'disconnected'
+    mariadb: isMariaReady ? 'connected' : 'disconnected',
+    mariadbPool: mariaStats
   });
 });
 
@@ -320,7 +348,17 @@ async function searchGoogleBooks(title, author) {
     return null;
   }
 }
-    
+async function getMariaConnection(retries = 3) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await mariaPool.getConnection();
+    } catch (err) {
+      console.warn(`⚠️ MariaDB connection attempt ${i + 1}/${retries} failed: ${err.message}`);
+      if (i === retries - 1) throw err;
+      await new Promise(r => setTimeout(r, 1000 * (i+1)));
+    }
+  }
+}  
 async function searchGoodreadsDB(isbn) {
   if (!isbn) return null;
 
@@ -353,7 +391,7 @@ async function searchGoodreadsDB(isbn) {
   
   let conn;
   try {
-    conn = await mariaPool.getConnection();
+    conn = await getMariaConnection();
     
     const query = 'SELECT star_rating, num_ratings FROM Scrape WHERE isbn IN (?) LIMIT 1';
     const rows = await conn.query(query, [isbnVariants]);
