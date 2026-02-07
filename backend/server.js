@@ -17,7 +17,6 @@ const PORT = process.env.PORT || 3001;
 // Trust proxy - needed for Railway/Heroku/etc to get real IP addresses
 app.set('trust proxy', 1);
 
-// Initialize Supabase client
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY,
