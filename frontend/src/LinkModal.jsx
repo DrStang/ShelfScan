@@ -4,33 +4,10 @@ import amazonImage from './amazon.png';
 import googleImage from './Google_Play_Books_icon_(2023).svg.png';
 import goodreadsImage from './Goodreads_logo_2025.png';
 
-onClose, book }) => {
+const LinkModal = ({ show, onClose, book }) => {
     if (!show || !book) {
         return null;
     }
-
-    // 2. UPDATE LINKS ARRAY to include AmazonIcon
-    const links = [
-        {
-            name: 'Amazon Product Page',
-            icon: AmazonIcon, // Using the custom component
-            url: book.amazonUrl,
-            color: 'text-orange-600 hover:text-orange-800',
-        },
-        {
-            name: 'Goodreads Page',
-            icon: Star,
-            url: book.goodreadsUrl,
-            color: 'text-amber-700 hover:text-amber-900',
-        },
-        {
-            name: 'Google Books Details',
-            icon: Globe,
-            url: book.infoLink,
-            color: 'text-blue-600 hover:text-blue-800',
-        },
-    ];
-
     return (
         <div
             className="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4"
