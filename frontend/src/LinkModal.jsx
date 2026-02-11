@@ -35,10 +35,6 @@ const LinkModal = ({ show, onClose, book }) => {
                                 alt={book.title}
                                 className="w-16 h-24 object-cover rounded-lg shadow-md"
                             />
-                        ) : (
-                            <div className="w-20 h-28 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center flex-shrink-0">
-                                <span className="text-gray-400 dark:text-gray-500 text-xs">No Cover</span>
-                            </div>
                         )}
                         <div className="min-w-0 flex-1">    
                             <h3 className="text-xl font-semibold text-indigo-700">
