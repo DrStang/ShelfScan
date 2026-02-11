@@ -1,5 +1,4 @@
 import React from 'react';
-import { X, Globe, Star } from 'lucide-react';
 import amazonImage from './amazon.png';
 import googleImage from './Google_Play_Books_icon_(2023).svg.png';
 import goodreadsImage from './Goodreads_logo_2025.png';
