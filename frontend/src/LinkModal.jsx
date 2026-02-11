@@ -112,7 +112,7 @@ const LinkModal = ({ show, onClose, book }) => {
                             )}
                         </div>
                     </div>
-                    <book.description && (
+                    {book.description && (
                         <div className="mb-6">
                             <p className="text-sm font-medium text-gray-500 uppercase tracking-wide mb-2">
                                 About
