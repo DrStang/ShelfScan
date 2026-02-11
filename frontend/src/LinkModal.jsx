@@ -70,7 +70,7 @@ const LinkModal = ({ show, onClose, book }) => {
                                     href={book.amazonUrl}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className={`flex items-center gap-4 p-4 border border-gray-200 rounded-lg transition-all group ${link.color} hover:bg-gray-100`}
+                                    className={`flex items-center gap-4 p-4 border border-gray-200 rounded-lg transition-all group hover:bg-gray-100`}
                                 >
                                     <img
                                         src={amazonImage}
@@ -84,8 +84,7 @@ const LinkModal = ({ show, onClose, book }) => {
                                     href={book.goodreadsUrl}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    onClick={handleLinkClick}
-                                    className={`flex items-center gap-4 p-4 border border-gray-200 rounded-lg transition-all group ${link.color} hover:bg-gray-100`}
+                                    className={`flex items-center gap-4 p-4 border border-gray-200 rounded-lg transition-all group hover:bg-gray-100`}
                                 >
                                     <img
                                         src={goodreadsImage}
@@ -100,8 +99,7 @@ const LinkModal = ({ show, onClose, book }) => {
                                     href={book.infoLink}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    onClick={handleLinkClick}
-                                    className={`flex items-center gap-4 p-4 border border-gray-200 rounded-lg transition-all group ${link.color} hover:bg-gray-100`}
+                                    className={`flex items-center gap-4 p-4 border border-gray-200 rounded-lg transition-all group hover:bg-gray-100`}
                                 >
                                     <img
                                         src={googleImage}
