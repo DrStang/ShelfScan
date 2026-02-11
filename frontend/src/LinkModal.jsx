@@ -45,12 +45,12 @@ const LinkModal = ({ show, onClose, book }) => {
                             </p>
                             {book.rating > 0 && (
                                 <div className="flex items-center gap-1">
-                                    <span ClassName="text-yellow-500">★</span>
-                                    <span ClassName="font-semibold text-gray-800">
+                                    <span className="text-yellow-500">★</span>
+                                    <span className="font-semibold text-gray-800">
                                         {book.rating.toFixed(1)}
                                     </span>
                                     {book.ratingsCount > 0 && (
-                                        <span ClassName="text-xs text-gray-500">
+                                        <span className="text-xs text-gray-500">
                                             ({book.ratingsCount.toLocaleString()})
                                         </span>
                                      )}
