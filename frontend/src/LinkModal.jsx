@@ -14,7 +14,7 @@ const LinkModal = ({ show, onClose, book }) => {
             onClick={onClose}
         >
             <div
-                className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 relative transform transition-all overflow-y-auto"
+            className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl mx-4 relative transform transition-all flex flex-col max-h-[90dvh] overflow-y-auto"                
                 onClick={e => e.stopPropagation()}
             >
                 {/* Close Button */}
@@ -27,7 +27,7 @@ const LinkModal = ({ show, onClose, book }) => {
                 </button>
 
                 {/* Header: Book Info */}
-                <div className="px-6 pb-6">
+                <div className="px-6 pb-6" flex-shrink-0 sticky>
                     <div className="flex gap-4 mb-6">
                         {book.thumbnail && (
                             <img
