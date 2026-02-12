@@ -66,9 +66,7 @@ function BulkExportModal({ isOpen, onClose, scanHistory }) {
     };
 
     const toggleScan = async (scanId) => {
-        if (Capacitor.isNativePlatform()) {
-            await Haptics.impact({ style: ImpactStyle.Light });
-        }
+
         setSelectedScans(prev => {
             const newSet = new Set(prev);
             if (newSet.has(scanId)) {
@@ -81,16 +79,10 @@ function BulkExportModal({ isOpen, onClose, scanHistory }) {
     };
 
     const selectAll = async () => {
-        if (Capacitor.isNativePlatform()) {
-            await Haptics.impact({ style: ImpactStyle.Light });
-        }
         setSelectedScans(new Set(scanHistory.map(scan => scan.id)));
     };
 
     const selectNone = async () => {
-        if (Capacitor.isNativePlatform()) {
-            await Haptics.impact({ style: ImpactStyle.Light });
-        }
         setSelectedScans(new Set());
     };
 
@@ -363,10 +355,7 @@ function BulkExportModal({ isOpen, onClose, scanHistory }) {
             return;
         }
 
-        if (Capacitor.isNativePlatform()) {
-            await Haptics.impact({ style: ImpactStyle.Medium });
-        }
-
+        
         setExporting(true);
         setExportFormat(format);
 
@@ -394,41 +383,7 @@ function BulkExportModal({ isOpen, onClose, scanHistory }) {
                     throw new Error('Unknown format');
             }
 
-            if (Capacitor.isNativePlatform()) {
-                try {
-                    const result = await Filesystem.writeFile({
-                        path: filename,
-                        data: content,
-                        directory: Directory.Cache,
-                        encoding: Encoding.UTF8
-                    });
-
-                    await CapacitorShare.share({
-                        files: [result.uri],
-                    });
-
-                    setTimeout(async () => {
-                        try {
-                            await Filesystem.deleteFile({
-                                path: filename,
-                                directory: Directory.Cache
-                            });
-                        } catch (e) {
-                            // Ignore cleanup errors
-                        }
-                    }, 5000);
-
-                } catch (fsError) {
-                    console.error('Filesystem error:', fsError);
-                    if (format === 'txt' || format === 'csv') {
-                        await CapacitorShare.share({
-                            text: content,
-                        });
-                    } else {
-                        throw fsError;
-                    }
-                }
-            } else {
+        
                 const blob = new Blob([content], { type: mimeType });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
@@ -438,18 +393,12 @@ function BulkExportModal({ isOpen, onClose, scanHistory }) {
                 a.click();
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
-            }
-
-            if (Capacitor.isNativePlatform()) {
-                await Haptics.notification({ type: NotificationType.Success });
-            }
+            
 
             onClose();
         } catch (err) {
             console.error('Export error:', err);
-            if (Capacitor.isNativePlatform()) {
-                await Haptics.notification({ type: NotificationType.Error });
-            }
+
             alert('Export failed. Please try again.');
         } finally {
             setExporting(false);
@@ -471,10 +420,10 @@ function BulkExportModal({ isOpen, onClose, scanHistory }) {
                 <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-5 py-4 flex items-center justify-between flex-shrink-0">
                     <div>
                         <h2 className="text-lg font-bold text-gray-900 dark:text-white">
-                            {i18n.t('bulkExport.title') || 'Export History'}
+                            Export History
                         </h2>
                         <p className="text-sm text-gray-500 dark:text-gray-400">
-                            {i18n.t('bulkExport.subtitle') || 'Select scans to include'}
+                            Select scans to include
                         </p>
                     </div>
                     <button
@@ -490,11 +439,11 @@ function BulkExportModal({ isOpen, onClose, scanHistory }) {
                     <div className="flex items-center gap-4">
                         <div className="text-center">
                             <div className="text-xl font-bold text-indigo-600 dark:text-indigo-400">{totals.scans}</div>
-                            <div className="text-xs text-gray-600 dark:text-gray-400">{i18n.t('bulkExport.scansSelected') || 'Scans'}</div>
+                            <div className="text-xs text-gray-600 dark:text-gray-400">Scans</div>
                         </div>
                         <div className="text-center">
                             <div className="text-xl font-bold text-amber-600 dark:text-amber-400">{totals.totalBooks}</div>
-                            <div className="text-xs text-gray-600 dark:text-gray-400">{i18n.t('bulkExport.totalBooks') || 'Books'}</div>
+                            <div className="text-xs text-gray-600 dark:text-gray-400">Books</div>
                         </div>
                     </div>
                     <div className="flex gap-2">
@@ -502,13 +451,13 @@ function BulkExportModal({ isOpen, onClose, scanHistory }) {
                             onClick={selectAll}
                             className="px-3 py-1.5 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 rounded-lg transition-colors"
                         >
-                            {i18n.t('bulkExport.selectAll') || 'All'}
+                            All
                         </button>
                         <button
                             onClick={selectNone}
                             className="px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                         >
-                            {i18n.t('bulkExport.selectNone') || 'None'}
+                            None
                         </button>
                     </div>
                 </div>
@@ -572,7 +521,7 @@ function BulkExportModal({ isOpen, onClose, scanHistory }) {
                 {/* Export Buttons */}
                 <div className="border-t border-gray-200 dark:border-gray-700 px-5 py-4 flex-shrink-0">
                     <p className="text-xs text-gray-500 dark:text-gray-400 mb-3 text-center">
-                        {i18n.t('bulkExport.chooseFormat') || 'Choose export format'}
+                        Choose export format
                     </p>
                     <div className="flex gap-3">
                         <button
