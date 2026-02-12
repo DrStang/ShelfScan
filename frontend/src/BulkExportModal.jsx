@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { X, Download, FileText, Table, Check, CheckSquare, Square, Loader2, Calendar, Book } from 'lucide-react';
+import { X, Download, FileText, Table, CheckSquare, Square, Loader2, Calendar, Book } from 'lucide-react';
 
 
 function BulkExportModal({ isOpen, onClose, scanHistory }) {
