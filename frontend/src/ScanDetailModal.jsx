@@ -1,9 +1,6 @@
 import React, { useState } from 'react';
 import { X, Download, Star, BookOpen, FileText, Table, Share as ShareIcon, ChevronRight, Loader2 } from 'lucide-react';
-import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics';
-import { Capacitor } from '@capacitor/core';
-import { Share as CapacitorShare } from '@capacitor/share';
-import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
+
 
 function ScanDetailModal({ isOpen, onClose, scan, onViewBook }) {
     const [exporting, setExporting] = useState(false);
