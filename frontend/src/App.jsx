@@ -234,6 +234,7 @@ function App() {
   const handleViewScanDetail = (scan) => {
     setSelectedScan(scan);
     setShowScanDetailModal(true);
+  }  
 
   const handleViewBookFromDetail = (book) => {
     setShowScanDetailModal(false);
