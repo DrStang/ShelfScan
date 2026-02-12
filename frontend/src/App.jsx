@@ -15,6 +15,8 @@ import HelpButton from "./HelpButton";
 import PrivacyModal from './PrivacyModal';
 import ProfileModal from './ProfileModal';
 import DeleteHistory from './DeleteHistory';
+import ScanDetailModal from './ScanDetailModal';
+import BulkExportModal from './BulkExportModal';
 
 
 function App() {
@@ -39,7 +41,9 @@ function App() {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showDeleteHistory, setShowDeleteHistory] = useState(false);
   const [selectedScanForDelete, setSelectedScanForDelete] = useState(null);
-  
+  const [showScanDetailModal, setShowScanDetailModal] = useState(false);
+  const [selectedScan, setSelectedScan] = useState(null);
+  const [showBulkExport, setShowBulkExport] = useState(false);
 
 
   const { user, session, signOut, loading: authLoading } = useAuth();
@@ -226,6 +230,17 @@ function App() {
     setSelectedBook(bookData);
     setShowLinkModal(true);
 };
+
+  const handleViewScanDetail = (scan) => {
+    setSelectedScan(scan);
+    setShowScanDetailModal(true);
+
+  const handleViewBookFromDetail = (book) => {
+    setShowScanDetailModal(false);
+    setSelectedBook(book);
+    setShowLinkModal(true);
+  }  
+    
   const openDescriptModal = (bookData) => {
     setSelectedBook(bookData);
     setShowDescriptModal(true);
@@ -355,6 +370,15 @@ const topThreeBooks = displayBooks.slice(0, 3);
           {showHistory && user && (
             <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
               <h2 className="text-2xl font-bold text-gray-800 mb-4">Recent Scans</h2>
+              {user && scanHistory.length > = && (
+                <button
+                  onClick{() => setShowBulkExport(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-indigo-100 text-indigo-700 rounded-xl font-medium hover:bg-indigo-200 transition-colors"
+                >
+                  <Download className="w-4 h-4" />
+                  Export All
+              </button>
+              )}
               {scanHistory.length === 0 ? (
                 <p className="text-gray-500">No scans yet. Start scanning books to build your history!</p>
               ) : (
@@ -377,11 +401,18 @@ const topThreeBooks = displayBooks.slice(0, 3);
                           </span>
                         ))}
                         {scan.books.length > 3 && (
-                          <span className="text-sm text-gray-500">
+                      {/*<span className="text-sm text-gray-500">
                             +{scan.books.length - 3} more
                           </span>
                         )}
-                        <span>
+                        <span>*/}
+                        <button
+                          onClick={() => handleViewScanDetail(book)}
+                          className="min-h-[44px] text-blue-600 hover:text-blue-800 underline font-medium cursor-pointer touch-manipulation flex items-center"
+                        >
+                          +{scan.books.length - 3} more
+                        </button>
+                        )}
                           <button
                               onClick={() => {
                                 setSelectedScanForDelete(scan);
@@ -842,6 +873,17 @@ const topThreeBooks = displayBooks.slice(0, 3);
         isOpen={showPwChangeModal}
         onClose={() => setShowPwChangeModal(false)}
         />
+      <ScanDetailModal
+        isOpen={showScanDetailModal}
+        onClose={() => setShowScanDetailModal(false)}
+        scan={selectedScan}
+        onViewBook={handleViewBookFromDetail}
+      />  
+      <BulkExportModal
+        isOpen={showBulkExport}
+        onClose={() => setShowBulkExport(false)}
+        scanHistory={scanHistory}
+      />  
       <ProfileModal
         isOpen={showProfileModal}
         onClose={() => setShowProfileModal(false)}
