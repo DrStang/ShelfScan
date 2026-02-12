@@ -293,14 +293,14 @@ function ScanDetailModal({ isOpen, onClose, scan, onViewBook }) {
                         <p className="text-sm text-gray-500">
                             {formatDate(scanDate)} • {formatTime(scanDate)}
                         </p>
+                   
+                        <button
+                            onClick={onClose}
+                            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                        >
+                            <X className="w-6 h-6 text-gray-500" />
+                        </button>
                     </div>
-                    <button
-                        onClick={onClose}
-                        className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-                    >
-                        <X className="w-6 h-6 text-gray-500" />
-                    </button>
-              
                 <div className="overflow-y-auto flex-1 custom-scrollbar">
                     {/* Stats Bar */}
                     <div className="bg-indigo-50 px-6 py-4 flex justify-around">
