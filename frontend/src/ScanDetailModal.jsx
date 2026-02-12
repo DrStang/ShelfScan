@@ -281,162 +281,161 @@ function ScanDetailModal({ isOpen, onClose, scan, onViewBook }) {
             className="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4"
             onClick={onClose}
         >
-            <div
-                className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 relative transform transition-all overflow-y-auto"
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl mx-4 relative transform transition-all flex flex-col max-h-[90dvh]"                onClick={e => e.stopPropagation()}
                 onClick={e => e.stopPropagation()}
-            >
+                >
                 {/* Header */}
-                <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between z-10">
-                    <div>
-                        <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                    <div className="flex-shrink-0 sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between z-10 rounded-t-2xl">                    <div>
+                        <h2 className="text-xl font-bold text-gray-900">
                             Scan Details
                         </h2>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                        <p className="text-sm text-gray-500">
                             {formatDate(scanDate)} • {formatTime(scanDate)}
                         </p>
                     </div>
                     <button
                         onClick={onClose}
-                        className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
+                        className="p-2 hover:bg-gray-100 rounded-full transition-colors">
                     >
-                        <X className="w-6 h-6 text-gray-500 dark:text-gray-400" />
+                        <X className="w-6 h-6 text-gray-500" />
                     </button>
                 </div>
-
-                {/* Stats Bar */}
-                <div className="bg-indigo-50 dark:bg-indigo-900/30 px-6 py-4 flex justify-around">
-                    <div className="text-center">
-                        <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{books.length}</div>
-                        <div className="text-xs text-gray-600 dark:text-gray-400">Books Found</div>
-                    </div>
-                    <div className="text-center">
-                        <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">
-                            {books.filter(b => b.rating > 0).length > 0
-                                ? (books.filter(b => b.rating > 0).reduce((sum, b) => sum + b.rating, 0) / books.filter(b => b.rating > 0).length).toFixed(1)
-                                : 'N/A'}
+                <div className="overflow-y-auto flex-1 custom-scrollbar">
+                    {/* Stats Bar */}
+                    <div className="bg-indigo-50 px-6 py-4 flex justify-around">
+                        <div className="text-center">
+                            <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{books.length}</div>
+                            <div className="text-xs text-gray-600 dark:text-gray-400">Books Found</div>
                         </div>
-                        <div className="text-xs text-gray-600 dark:text-gray-400">Average Rating</div>
-                    </div>
-                    <div className="text-center">
-                        <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-                            {books.filter(b => b.inReadingList).length}
+                        <div className="text-center">
+                            <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">
+                                {books.filter(b => b.rating > 0).length > 0
+                                    ? (books.filter(b => b.rating > 0).reduce((sum, b) => sum + b.rating, 0) / books.filter(b => b.rating > 0).length).toFixed(1)
+                                    : 'N/A'}
+                            </div>
+                            <div className="text-xs text-gray-600 dark:text-gray-400">Average Rating</div>
                         </div>
-                        <div className="text-xs text-gray-600 dark:text-gray-400">On List</div>
+                        <div className="text-center">
+                            <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                                {books.filter(b => b.inReadingList).length}
+                            </div>
+                            <div className="text-xs text-gray-600 dark:text-gray-400">On List</div>
+                        </div>
                     </div>
-                </div>
-
-                {/* Export Buttons */}
-                <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                    <div className="flex items-center justify-between mb-3">
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Export As:</span>
-                       
-                    </div>
-                    <div className="flex gap-3">
-                        <button
-                            onClick={() => handleExport('csv')}
-                            disabled={exporting}
-                            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 text-green-700 dark:text-green-300 rounded-xl font-medium transition-colors disabled:opacity-50"
-                        >
-                            {exporting && exportFormat === 'csv' ? (
-                                <Loader2 className="w-5 h-5 animate-spin" />
-                            ) : (
-                                <Table className="w-5 h-5" />
-                            )}
-                            CSV
-                        </button>
-                        <button
-                            onClick={() => handleExport('html')}
-                            disabled={exporting}
-                            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-900/50 text-red-700 dark:text-red-300 rounded-xl font-medium transition-colors disabled:opacity-50"
-                        >
-                            {exporting && exportFormat === 'html' ? (
-                                <Loader2 className="w-5 h-5 animate-spin" />
-                            ) : (
-                                <FileText className="w-5 h-5" />
-                            )}
-                            HTML/PDF
-                        </button>
-                        <button
-                            onClick={() => handleExport('txt')}
-                            disabled={exporting}
-                            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-blue-100 dark:bg-blue-900/30 hover:bg-blue-200 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-300 rounded-xl font-medium transition-colors disabled:opacity-50"
-                        >
-                            {exporting && exportFormat === 'txt' ? (
-                                <Loader2 className="w-5 h-5 animate-spin" />
-                            ) : (
-                                <Download className="w-5 h-5" />
-                            )}
-                            TXT
-                        </button>
-                    </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
-                        Open HTML in browser → Print → Save as PDF
-                    </p>
-                </div>
-
-                {/* Book List */}
-                <div className="px-6 py-4 max-h-96 overflow-y-auto">
-                    <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                        All Books ({books.length})
-                    </h3>
-                    <div className="space-y-3">
-                        {books.map((book, index) => (
+    
+                    {/* Export Buttons */}
+                    <div className="px-6 py-4 border-b border-gray-200 ">
+                        <div className="flex items-center justify-between mb-3">
+                            <span className="text-sm font-medium text-gray-700">Export As:</span>
+                           
+                        </div>
+                        <div className="flex gap-3">
                             <button
-                                key={index}
-                                onClick={() => onViewBook && onViewBook(book)}
-                                className={`w-full text-left flex items-center gap-4 p-4 rounded-xl transition-all active:scale-98 ${
-                                    book.inReadingList
-                                        ? 'bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-700'
-                                        : 'bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600'
-                                }`}
+                                onClick={() => handleExport('csv')}
+                                disabled={exporting}
+                                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 text-green-700 dark:text-green-300 rounded-xl font-medium transition-colors disabled:opacity-50"
                             >
-                                {/* Rank */}
-                                <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold text-white flex-shrink-0 ${
-                                    index === 0 ? 'bg-amber-500' :
-                                        index === 1 ? 'bg-gray-400' :
-                                            index === 2 ? 'bg-orange-400' : 'bg-indigo-500'
-                                }`}>
-                                    #{index + 1}
-                                </div>
-
-                                {/* Book Info */}
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-start justify-between gap-2">
-                                        <div className="min-w-0">
-                                            <h4 className="font-semibold text-gray-900 dark:text-white truncate">
-                                                {book.title}
-                                            </h4>
-                                            <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
-                                                {book.author || 'Unknown Author'}
-                                            </p>
-                                        </div>
-                                        {book.inReadingList && (
-                                            <BookOpen className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
-                                        )}
-                                    </div>
-                                    <div className="flex items-center gap-2 mt-1">
-                                        <div className="flex items-center gap-1 bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 rounded-full">
-                                            <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                                            <span className="text-sm font-medium text-gray-900 dark:text-white">
-                                                {book.rating ? book.rating.toFixed(1) : 'N/A'}
-                                            </span>
-                                        </div>
-                                        {book.ratingsCount > 0 && (
-                                            <span className="text-xs text-gray-500 dark:text-gray-400">
-                                                ({book.ratingsCount.toLocaleString()})
-                                            </span>
-                                        )}
-                                    </div>
-                                </div>
-
-                                <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                                {exporting && exportFormat === 'csv' ? (
+                                    <Loader2 className="w-5 h-5 animate-spin" />
+                                ) : (
+                                    <Table className="w-5 h-5" />
+                                )}
+                                CSV
                             </button>
-                        ))}
+                            <button
+                                onClick={() => handleExport('html')}
+                                disabled={exporting}
+                                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-900/50 text-red-700 dark:text-red-300 rounded-xl font-medium transition-colors disabled:opacity-50"
+                            >
+                                {exporting && exportFormat === 'html' ? (
+                                    <Loader2 className="w-5 h-5 animate-spin" />
+                                ) : (
+                                    <FileText className="w-5 h-5" />
+                                )}
+                                HTML/PDF
+                            </button>
+                            <button
+                                onClick={() => handleExport('txt')}
+                                disabled={exporting}
+                                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-blue-100 dark:bg-blue-900/30 hover:bg-blue-200 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-300 rounded-xl font-medium transition-colors disabled:opacity-50"
+                            >
+                                {exporting && exportFormat === 'txt' ? (
+                                    <Loader2 className="w-5 h-5 animate-spin" />
+                                ) : (
+                                    <Download className="w-5 h-5" />
+                                )}
+                                TXT
+                            </button>
+                        </div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
+                            Open HTML in browser → Print → Save as PDF
+                        </p>
                     </div>
-                </div>
+    
+                    {/* Book List */}
+                    <div className="px-6 py-4">
+                        <h3 className="text-sm font-semibold text-gray-700 mb-3">
+                            All Books ({books.length})
+                        </h3>
+                        <div className="space-y-3">
+                            {books.map((book, index) => (
+                                <button
+                                    key={index}
+                                    onClick={() => onViewBook && onViewBook(book)}
+                                    className={`w-full text-left flex items-center gap-4 p-4 rounded-xl transition-all active:scale-98 ${
+                                        book.inReadingList
+                                            ? 'bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-700'
+                                            : 'bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600'
+                                    }`}
+                                >
+                                    {/* Rank */}
+                                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold text-white flex-shrink-0 ${
+                                        index === 0 ? 'bg-amber-500' :
+                                            index === 1 ? 'bg-gray-400' :
+                                                index === 2 ? 'bg-orange-400' : 'bg-indigo-500'
+                                    }`}>
+                                        #{index + 1}
+                                    </div>
+    
+                                    {/* Book Info */}
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-start justify-between gap-2">
+                                            <div className="min-w-0">
+                                                <h4 className="font-semibold text-gray-900 dark:text-white truncate">
+                                                    {book.title}
+                                                </h4>
+                                                <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
+                                                    {book.author || 'Unknown Author'}
+                                                </p>
+                                            </div>
+                                            {book.inReadingList && (
+                                                <BookOpen className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+                                            )}
+                                        </div>
+                                        <div className="flex items-center gap-2 mt-1">
+                                            <div className="flex items-center gap-1 bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 rounded-full">
+                                                <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                                                <span className="text-sm font-medium text-gray-900 dark:text-white">
+                                                    {book.rating ? book.rating.toFixed(1) : 'N/A'}
+                                                </span>
+                                            </div>
+                                            {book.ratingsCount > 0 && (
+                                                <span className="text-xs text-gray-500 dark:text-gray-400">
+                                                    ({book.ratingsCount.toLocaleString()})
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+    
+                                    <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </div>  
 
                 {/* Footer */}
-                <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+                <div className="flex-shrink-0 px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-2xl">                    
                     <button
                         onClick={onClose}
                         className="w-full py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-xl font-semibold hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
