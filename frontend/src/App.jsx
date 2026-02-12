@@ -372,7 +372,7 @@ const topThreeBooks = displayBooks.slice(0, 3);
               <h2 className="text-2xl font-bold text-gray-800 mb-4">Recent Scans</h2>
               {user && scanHistory.length > 0 && (
                 <button
-                  onClick{() => setShowBulkExport(true)}
+                  onClick={() => setShowBulkExport(true)}
                   className="flex items-center gap-2 px-4 py-2 bg-indigo-100 text-indigo-700 rounded-xl font-medium hover:bg-indigo-200 transition-colors"
                 >
                   <Download className="w-4 h-4" />
