@@ -277,6 +277,7 @@ function ScanDetailModal({ isOpen, onClose, scan, onViewBook }) {
 
    
     return (
+      <>  
          <div
             className="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4"
             onClick={onClose}
@@ -445,6 +446,7 @@ function ScanDetailModal({ isOpen, onClose, scan, onViewBook }) {
                 </div>
             </div>
         </div>
+      </>  
     );
 }
 
