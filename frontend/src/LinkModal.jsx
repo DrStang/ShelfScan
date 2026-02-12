@@ -27,7 +27,7 @@ const LinkModal = ({ show, onClose, book }) => {
                 </button>
 
                 {/* Header: Book Info */}
-                <div className="px-6 pb-6" flex-shrink-0 sticky>
+                <div className="flex-shrink-0 sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10 rounded-t-2xl">                   
                     <div className="flex gap-4 mb-6">
                         {book.thumbnail && (
                             <img
