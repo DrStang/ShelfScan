@@ -401,11 +401,7 @@ const topThreeBooks = displayBooks.slice(0, 3);
                           </span>
                         ))}
                         {scan.books.length > 3 && (
-                      {/*<span className="text-sm text-gray-500">
-                            +{scan.books.length - 3} more
-                          </span>
-                        )}
-                        <span>*/}
+      
                         <button
                           onClick={() => handleViewScanDetail(book)}
                           className="min-h-[44px] text-blue-600 hover:text-blue-800 underline font-medium cursor-pointer touch-manipulation flex items-center"
