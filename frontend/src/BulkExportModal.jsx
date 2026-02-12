@@ -1,9 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { X, Download, FileText, Table, Check, CheckSquare, Square, Loader2, Calendar, Book } from 'lucide-react';
-import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics';
-import { Capacitor } from '@capacitor/core';
-import { Share as CapacitorShare } from '@capacitor/share';
-import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
+
 
 function BulkExportModal({ isOpen, onClose, scanHistory }) {
     const [selectedScans, setSelectedScans] = useState(new Set());
