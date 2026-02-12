@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Download, Star, BookOpen, FileText, Table, Share as ShareIcon, ChevronRight, Loader2 } from 'lucide-react';
+import { X, Download, Star, BookOpen, FileText, Table, ChevronRight, Loader2 } from 'lucide-react';
 
 
 function ScanDetailModal({ isOpen, onClose, scan, onViewBook }) {
