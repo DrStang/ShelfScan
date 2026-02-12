@@ -402,13 +402,14 @@ const topThreeBooks = displayBooks.slice(0, 3);
                         ))}
                         {scan.books.length > 3 && (
       
-                        <button
-                          onClick={() => handleViewScanDetail(book)}
-                          className="min-h-[44px] text-blue-600 hover:text-blue-800 underline font-medium cursor-pointer touch-manipulation flex items-center"
-                        >
-                          +{scan.books.length - 3} more
-                        </button>
+                          <button
+                            onClick={() => handleViewScanDetail(scan)}
+                            className="min-h-[44px] text-blue-600 hover:text-blue-800 underline font-medium cursor-pointer touch-manipulation flex items-center"
+                          >
+                            +{scan.books.length - 3} more
+                          </button>
                         )}
+                        <span>
                           <button
                               onClick={() => {
                                 setSelectedScanForDelete(scan);
