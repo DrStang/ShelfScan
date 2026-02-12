@@ -281,9 +281,9 @@ function ScanDetailModal({ isOpen, onClose, scan, onViewBook }) {
             className="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4"
             onClick={onClose}
         >
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl mx-4 relative transform transition-all flex flex-col max-h-[90dvh]"                onClick={e => e.stopPropagation()}
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl mx-4 relative transform transition-all flex flex-col max-h-[90dvh]"                
                 onClick={e => e.stopPropagation()}
-                >
+            >
                 {/* Header */}
                     <div className="flex-shrink-0 sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between z-10 rounded-t-2xl">                    <div>
                         <h2 className="text-xl font-bold text-gray-900">
