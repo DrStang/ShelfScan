@@ -227,9 +227,6 @@ function ScanDetailModal({ isOpen, onClose, scan, onViewBook }) {
     };
 
     const handleExport = async (format) => {
-        if (Capacitor.isNativePlatform()) {
-            await Haptics.impact({ style: ImpactStyle.Medium });
-        }
 
         setExporting(true);
         setExportFormat(format);
@@ -256,53 +253,6 @@ function ScanDetailModal({ isOpen, onClose, scan, onViewBook }) {
                 default:
                     throw new Error('Unknown format');
             }
-
-            if (Capacitor.isNativePlatform()) {
-                // For native platforms: Save file to cache directory, then share
-                try {
-                    // Write file to cache directory
-                    const result = await Filesystem.writeFile({
-                        path: filename,
-                        data: content,
-                        directory: Directory.Cache,
-                        encoding: Encoding.UTF8
-                    });
-
-                    console.log('File written to:', result.uri);
-
-                    // Share the file using its URI
-                    // Note: Only pass 'files' - adding 'title' or 'text' creates extra share items on iOS
-                    await CapacitorShare.share({
-                        files: [result.uri],
-                    });
-
-                    // Optionally clean up the file after sharing (delayed)
-                    setTimeout(async () => {
-                        try {
-                            await Filesystem.deleteFile({
-                                path: filename,
-                                directory: Directory.Cache
-                            });
-                        } catch (e) {
-                            // Ignore cleanup errors
-                        }
-                    }, 5000);
-
-                } catch (fsError) {
-                    console.error('Filesystem error:', fsError);
-
-                    // Fallback: Try sharing as text if file sharing fails
-                    if (format === 'txt' || format === 'csv') {
-                        await CapacitorShare.share({
-                            title: `Shelf Scan Export`,
-                            text: content,
-                            dialogTitle: 'Export Scan Results',
-                        });
-                    } else {
-                        throw fsError;
-                    }
-                }
-            } else {
                 // For web, trigger download
                 const blob = new Blob([content], { type: mimeType });
                 const url = URL.createObjectURL(blob);
@@ -313,16 +263,11 @@ function ScanDetailModal({ isOpen, onClose, scan, onViewBook }) {
                 a.click();
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
-            }
+            
 
-            if (Capacitor.isNativePlatform()) {
-                await Haptics.notification({ type: NotificationType.Success });
-            }
         } catch (err) {
             console.error('Export error:', err);
-            if (Capacitor.isNativePlatform()) {
-                await Haptics.notification({ type: NotificationType.Error });
-            }
+    
             alert('Export failed. Please try again.');
         } finally {
             setExporting(false);
@@ -330,24 +275,7 @@ function ScanDetailModal({ isOpen, onClose, scan, onViewBook }) {
         }
     };
 
-    const handleShareScan = async () => {
-        if (Capacitor.isNativePlatform()) {
-            await Haptics.impact({ style: ImpactStyle.Light });
-        }
-
-        const topBooks = books.slice(0, 3).map((b, i) => `${i + 1}. ${b.title} (${b.rating?.toFixed(1) || 'N/A'}★)`).join('\n');
-
-        try {
-            await CapacitorShare.share({
-                title: 'My Shelf Scan Results',
-                text: `📚 I scanned ${books.length} books!\n\nTop rated:\n${topBooks}\n\nScanned with Shelf Scan`,
-                dialogTitle: 'Share Scan Results',
-            });
-        } catch (err) {
-            console.log('Share cancelled or failed:', err);
-        }
-    };
-
+   
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 overflow-y-auto" onClick={onClose}>
 
@@ -400,13 +328,7 @@ function ScanDetailModal({ isOpen, onClose, scan, onViewBook }) {
                 <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
                     <div className="flex items-center justify-between mb-3">
                         <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Export As:</span>
-                        <button
-                            onClick={handleShareScan}
-                            className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-200 transition-colors"
-                        >
-                            <ShareIcon className="w-4 h-4" />
-                            Share
-                        </button>
+                       
                     </div>
                     <div className="flex gap-3">
                         <button
