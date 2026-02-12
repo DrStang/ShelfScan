@@ -277,12 +277,13 @@ function ScanDetailModal({ isOpen, onClose, scan, onViewBook }) {
 
    
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 overflow-y-auto" onClick={onClose}>
-
+         <div
+            className="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4"
+            onClick={onClose}
+        >
             <div
-                className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg mx-4 mt-16 overflow-hidden flex flex-col max-h-[calc(100vh-6rem)]"
-                style={{ marginTop: 'max(4rem, calc(env(safe-area-inset-top) + 1 rem))'}}
-                onClick={(e) => e.stopPropagation()}
+                className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 relative transform transition-all overflow-y-auto"
+                onClick={e => e.stopPropagation()}
             >
                 {/* Header */}
                 <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between z-10">
