@@ -300,7 +300,7 @@ function ScanDetailModal({ isOpen, onClose, scan, onViewBook }) {
                     >
                         <X className="w-6 h-6 text-gray-500" />
                     </button>
-                </div>
+              
                 <div className="overflow-y-auto flex-1 custom-scrollbar">
                     {/* Stats Bar */}
                     <div className="bg-indigo-50 px-6 py-4 flex justify-around">
