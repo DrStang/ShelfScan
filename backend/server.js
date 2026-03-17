@@ -1602,8 +1602,162 @@ app.delete('/api/scans/:scanId', async (req, res) => {
     });
   }
 });
+// ============================================
+// 1. SINGLE BOOK LOOKUP ENDPOINT
+// Used when user manually adds or corrects a book
+// ============================================
 
+app.post('/api/lookup-book', async (req, res) => {
+  try {
+    const { title, author } = req.body;
 
+    if(!title || !title.trim()) {
+      return res.status(400).json({ error: 'Title is required' });
+    }
+
+    const searchTitle = title.trim();
+    const searchAuthor = (author || '').trim();
+ 
+    console.log(`📖 Looking up book: "${searchTitle}" by "${searchAuthor}"`);
+ 
+    // Check cache first
+    const cacheKey = `book:${searchTitle.toLowerCase()}:${searchAuthor.toLowerCase()}`;
+    const cached = await getFromCache(cacheKey);
+    if (cached) {
+      console.log(`✅ Cache hit for lookup: ${searchTitle}`);
+      return res.json({ success: true, book: cached });
+    }
+ 
+    // Search both sources in parallel
+    const [googleBook, openLibBook] = await Promise.all([
+      searchGoogleBooks(searchTitle, searchAuthor),
+      searchOpenLibrary(searchTitle, searchAuthor)
+    ]);
+    const goodreadsRating = isbn ? await searchGoodreadsDB(isbn) : null;
+    
+    const mergedData = mergeBookData(googleBook, openLibBook, goodreadsRating, searchTitle, searchAuthor);
+ 
+    if (!mergedData) {
+      return res.status(404).json({ 
+        error: 'Book not found',
+        // Return a basic entry so user can still add it
+        book: {
+          title: searchTitle,
+          author: searchAuthor,
+          rating: 0,
+          ratingsCount: 0,
+          ratingSource: 'No ratings available',
+          description: 'No description available',
+          thumbnail: null,
+          infoLink: null,
+          isbn: null,
+          publishYear: null,
+          goodreadsUrl: `https://www.goodreads.com/search?q=${encodeURIComponent(`${searchTitle} ${searchAuthor}`)}`,
+          amazonUrl: `https://www.amazon.com/s?k=${encodeURIComponent(`${searchTitle} ${searchAuthor}`)}&tag=${process.env.AMAZON_AFFILIATE_TAG || 'shelfscan05-20'}`,
+          sources: [],
+          manualEntry: true
+        }
+      });
+    }
+ 
+    // Cache the result
+    await setCache(cacheKey, mergedData);
+    console.log(`✅ Looked up and cached: ${searchTitle}`);
+ 
+    // Optionally cross-reference with reading list if userId provided
+    const userId = req.body.userId;
+    if (userId) {
+      try {
+        const { data: readingList } = await supabase
+          .from('reading_list')
+          .select('*')
+          .eq('user_id', userId);
+        
+        if (readingList && readingList.length > 0) {
+          const match = checkReadingList(mergedData, readingList);
+          if (match) {
+            mergedData.inReadingList = true;
+            mergedData.readingListInfo = match;
+          }
+        }
+      } catch (e) {
+        console.log('Could not check reading list:', e.message);
+      }
+    }
+ 
+    res.json({ success: true, book: mergedData });
+ 
+  } catch (error) {
+    console.error('Lookup error:', error);
+    res.status(500).json({ 
+      error: 'An unexpected error occurred',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+ 
+// ============================================
+// 2. UPDATE SCAN ENDPOINT
+// Updates the books array in an existing scan
+// ============================================
+app.put('/api/scans/:scanId', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+ 
+    const token = authHeader.split(' ')[1];
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    
+    if (authError || !user) {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
+ 
+    const { scanId } = req.params;
+    const { books } = req.body;
+ 
+    if (!books || !Array.isArray(books)) {
+      return res.status(400).json({ error: 'Books array is required' });
+    }
+ 
+    // Verify the scan belongs to this user
+    const { data: existingScan, error: fetchError } = await supabase
+      .from('scans')
+      .select('id, user_id')
+      .eq('id', scanId)
+      .eq('user_id', user.id)
+      .single();
+ 
+    if (fetchError || !existingScan) {
+      return res.status(404).json({ error: 'Scan not found' });
+    }
+ 
+    // Update the scan
+    const { error: updateError } = await supabase
+      .from('scans')
+      .update({ books: books })
+      .eq('id', scanId)
+      .eq('user_id', user.id);
+ 
+    if (updateError) {
+      console.error('Error updating scan:', updateError);
+      return res.status(500).json({ error: 'Failed to update scan' });
+    }
+ 
+    console.log(`✅ Updated scan ${scanId} for user ${user.id} - ${books.length} books`);
+ 
+    res.json({ 
+      success: true,
+      message: 'Scan updated successfully',
+      bookCount: books.length
+    });
+ 
+  } catch (error) {
+    console.error('Update scan error:', error);
+    res.status(500).json({ error: 'An unexpected error occurred' });
+  }
+});
 
 // Error handling middleware
 app.use((err, req, res, next) => {
