@@ -1633,7 +1633,7 @@ app.post('/api/lookup-book', async (req, res) => {
       searchGoogleBooks(searchTitle, searchAuthor),
       searchOpenLibrary(searchTitle, searchAuthor)
     ]);
-    const goodreadsRating = isbn ? await searchGoodreadsDB(isbn) : null;
+    // const goodreadsRating = isbn ? await searchGoodreadsDB(isbn) : null;
 
     const mergedData = mergeBookData(googleBook, openLibBook, goodreadsRating, searchTitle, searchAuthor);
 
