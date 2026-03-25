@@ -1609,7 +1609,7 @@ app.delete('/api/scans/:scanId', async (req, res) => {
 
 app.post('/api/lookup-book', async (req, res) => {
   try {
-    const { title, author } = req.body;
+    const { title, author, isbn } = req.body;
 
     if(!title || !title.trim()) {
       return res.status(400).json({ error: 'Title is required' });
@@ -1617,6 +1617,7 @@ app.post('/api/lookup-book', async (req, res) => {
 
     const searchTitle = title.trim();
     const searchAuthor = (author || '').trim();
+    const searchIsbn = (isbn || '').trim();
 
     console.log(`📖 Looking up book: "${searchTitle}" by "${searchAuthor}"`);
 
@@ -1633,7 +1634,7 @@ app.post('/api/lookup-book', async (req, res) => {
       searchGoogleBooks(searchTitle, searchAuthor),
       searchOpenLibrary(searchTitle, searchAuthor)
     ]);
-    // const goodreadsRating = isbn ? await searchGoodreadsDB(isbn) : null;
+    const goodreadsRating = isbn ? await searchGoodreadsDB(isbn) : null;
 
     const mergedData = mergeBookData(googleBook, openLibBook, goodreadsRating, searchTitle, searchAuthor);
 
