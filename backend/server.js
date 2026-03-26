@@ -1634,7 +1634,7 @@ app.post('/api/lookup-book', async (req, res) => {
       searchGoogleBooks(searchTitle, searchAuthor),
       searchOpenLibrary(searchTitle, searchAuthor)
     ]);
-    const goodreadsRating = isbn ? await searchGoodreadsDB(isbn) : null;
+    const goodreadsRating = searchIsbn ? await searchGoodreadsDB(searchIsbn) : null;
 
     const mergedData = mergeBookData(googleBook, openLibBook, goodreadsRating, searchTitle, searchAuthor);
 
@@ -2042,47 +2042,76 @@ app.delete('/api/shelves/:shelfId/books/:bookId', async (req, res) => {
 // USER BOOKS (Collection)
 // ================================================================
 
-// GET /api/user-books - Get user's book collection with optional filters
+// GET /api/user-books - Full-text search with advanced filters
 app.get('/api/user-books', async (req, res) => {
   try {
     const auth = await authenticateUser(req);
     if (auth.error) return res.status(auth.status).json({ error: auth.error });
 
-    const { shelfId, search, minRating, sort, limit, offset } = req.query;
+    const { shelfId, search, minRating, maxRating, sort, limit, offset, hasImage, unshelfed } = req.query;
 
     let query = supabase
         .from('user_books')
         .select(`
         *,
         book_shelves(shelf_id, shelves(id, name, color, icon))
-      `)
+      `, { count: 'exact' })
         .eq('user_id', auth.user.id);
 
     // Filter by shelf
     if (shelfId) {
-      // Get book IDs on this shelf, then filter
       const { data: shelfBooks } = await supabase
           .from('book_shelves')
           .select('book_id')
           .eq('shelf_id', shelfId);
 
       if (shelfBooks && shelfBooks.length > 0) {
-        const bookIds = shelfBooks.map(sb => sb.book_id);
-        query = query.in('id', bookIds);
+        query = query.in('id', shelfBooks.map(sb => sb.book_id));
       } else {
         return res.json({ success: true, books: [], total: 0 });
       }
     }
 
-    // Search by title or author
-    if (search) {
-      const term = `%${search.trim()}%`;
-      query = query.or(`title.ilike.${term},author.ilike.${term}`);
+    // Filter for unshelved books (not on any shelf)
+    if (unshelfed === 'true') {
+      // Get all book IDs that ARE on a shelf
+      const { data: shelvedBooks } = await supabase
+          .from('book_shelves')
+          .select('book_id');
+
+      if (shelvedBooks && shelvedBooks.length > 0) {
+        const shelvedIds = shelvedBooks.map(sb => sb.book_id);
+        query = query.not('id', 'in', `(${shelvedIds.join(',')})`);
+      }
     }
 
-    // Filter by minimum rating
+    // Full-text search (uses the search_vector column)
+    if (search && search.trim()) {
+      const term = search.trim();
+      // Use full-text search for multi-word queries, ilike for short ones
+      if (term.includes(' ') || term.length > 3) {
+        query = query.textSearch('search_vector', term, {
+          type: 'plain',
+          config: 'english'
+        });
+      } else {
+        // Short queries: use ilike for prefix matching (more intuitive)
+        const likeTerm = `%${term}%`;
+        query = query.or(`title.ilike.${likeTerm},author.ilike.${likeTerm}`);
+      }
+    }
+
+    // Rating filters
     if (minRating) {
       query = query.gte('rating', parseFloat(minRating));
+    }
+    if (maxRating) {
+      query = query.lte('rating', parseFloat(maxRating));
+    }
+
+    // Has thumbnail filter
+    if (hasImage === 'true') {
+      query = query.not('thumbnail', 'is', null);
     }
 
     // Sort
@@ -2090,15 +2119,22 @@ app.get('/api/user-books', async (req, res) => {
       case 'rating':
         query = query.order('rating', { ascending: false, nullsFirst: false });
         break;
+      case 'rating_asc':
+        query = query.order('rating', { ascending: true, nullsFirst: false });
+        break;
       case 'title':
         query = query.order('title', { ascending: true });
+        break;
+      case 'title_desc':
+        query = query.order('title', { ascending: false });
         break;
       case 'author':
         query = query.order('author', { ascending: true, nullsFirst: false });
         break;
-      case 'newest':
-        query = query.order('created_at', { ascending: false });
+      case 'oldest':
+        query = query.order('created_at', { ascending: true });
         break;
+      case 'newest':
       default:
         query = query.order('created_at', { ascending: false });
     }
@@ -2112,21 +2148,21 @@ app.get('/api/user-books', async (req, res) => {
 
     if (error) throw error;
 
-    // Transform: flatten the shelf data
+    // Flatten shelf data
     const result = (books || []).map(book => ({
       ...book,
       shelves: (book.book_shelves || []).map(bs => bs.shelves).filter(Boolean),
       book_shelves: undefined,
     }));
 
-    res.json({ success: true, books: result, total: count });
+    res.json({ success: true, books: result, total: count || 0 });
   } catch (error) {
     console.error('Error fetching user books:', error);
     res.status(500).json({ error: 'Failed to fetch books' });
   }
 });
 
-// GET /api/user-books/stats - Collection statistics
+// GET /api/user-books/stats - Enhanced collection statistics
 app.get('/api/user-books/stats', async (req, res) => {
   try {
     const auth = await authenticateUser(req);
@@ -2134,7 +2170,7 @@ app.get('/api/user-books/stats', async (req, res) => {
 
     const { data: books, error } = await supabase
         .from('user_books')
-        .select('rating, author')
+        .select('rating, author, created_at, thumbnail')
         .eq('user_id', auth.user.id);
 
     if (error) throw error;
@@ -2144,6 +2180,7 @@ app.get('/api/user-books/stats', async (req, res) => {
     const avgRating = rated.length > 0
         ? (rated.reduce((sum, b) => sum + parseFloat(b.rating), 0) / rated.length).toFixed(1)
         : 0;
+    const withCovers = books?.filter(b => b.thumbnail).length || 0;
 
     // Top authors by count
     const authorCounts = {};
@@ -2157,13 +2194,63 @@ app.get('/api/user-books/stats', async (req, res) => {
         .slice(0, 5)
         .map(([name, count]) => ({ name, count }));
 
+    // Rating distribution
+    const ratingDistribution = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+    rated.forEach(b => {
+      const bucket = Math.floor(parseFloat(b.rating));
+      if (bucket >= 0 && bucket <= 5) {
+        ratingDistribution[bucket]++;
+      }
+    });
+
+    // Books added over time (last 6 months by month)
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    const monthlyAdded = {};
+    books?.forEach(b => {
+      if (b.created_at) {
+        const date = new Date(b.created_at);
+        if (date >= sixMonthsAgo) {
+          const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+          monthlyAdded[key] = (monthlyAdded[key] || 0) + 1;
+        }
+      }
+    });
+
+    // Count unshelved books
+    const { data: shelvedBookIds } = await supabase
+        .from('book_shelves')
+        .select('book_id');
+
+    const shelvedSet = new Set((shelvedBookIds || []).map(sb => sb.book_id));
+    const unshelvedCount = books?.filter(b => !shelvedSet.has(b.id)).length || 0;
+
+    // Check for duplicates
+    const { data: dupes } = await supabase
+        .from('user_books')
+        .select('norm_key')
+        .eq('user_id', auth.user.id);
+
+    const normKeyCounts = {};
+    dupes?.forEach(d => {
+      if (d.norm_key) {
+        normKeyCounts[d.norm_key] = (normKeyCounts[d.norm_key] || 0) + 1;
+      }
+    });
+    const duplicateGroups = Object.values(normKeyCounts).filter(c => c > 1).length;
+
     res.json({
       success: true,
       stats: {
         totalBooks: total,
         avgRating: parseFloat(avgRating),
         ratedBooks: rated.length,
+        withCovers,
+        unshelvedCount,
+        duplicateGroups,
         topAuthors,
+        ratingDistribution,
+        monthlyAdded,
       }
     });
   } catch (error) {
@@ -2190,6 +2277,250 @@ app.delete('/api/user-books/:id', async (req, res) => {
   } catch (error) {
     console.error('Error deleting book:', error);
     res.status(500).json({ error: 'Failed to delete book' });
+  }
+});
+// GET /api/user-books/duplicates - Find duplicate books
+app.get('/api/user-books/duplicates', async (req, res) => {
+  try {
+    const auth = await authenticateUser(req);
+    if (auth.error) return res.status(auth.status).json({ error: auth.error });
+
+    // Get all books for this user
+    const { data: allBooks, error } = await supabase
+        .from('user_books')
+        .select(`
+        id, title, author, isbn, isbn13, rating, ratings_count, 
+        thumbnail, scan_id, created_at, norm_key,
+        book_shelves(shelf_id, shelves(id, name, color, icon))
+      `)
+        .eq('user_id', auth.user.id)
+        .order('created_at', { ascending: true });
+
+    if (error) throw error;
+
+    // Group by norm_key to find title+author duplicates
+    const groups = {};
+    (allBooks || []).forEach(book => {
+      const key = book.norm_key;
+      if (!key) return;
+      if (!groups[key]) groups[key] = [];
+      groups[key].push({
+        ...book,
+        shelves: (book.book_shelves || []).map(bs => bs.shelves).filter(Boolean),
+        book_shelves: undefined,
+      });
+    });
+
+    // Also check ISBN duplicates (different title but same ISBN = same book)
+    const isbnGroups = {};
+    (allBooks || []).forEach(book => {
+      const isbn = book.isbn || book.isbn13;
+      if (!isbn) return;
+      if (!isbnGroups[isbn]) isbnGroups[isbn] = [];
+      isbnGroups[isbn].push(book.id);
+    });
+
+    // Filter to only groups with 2+ books
+    const duplicates = Object.entries(groups)
+        .filter(([, books]) => books.length > 1)
+        .map(([normKey, books]) => {
+          // Recommend keeping the book with most metadata
+          const scored = books.map(b => ({
+            ...b,
+            metadataScore: (b.rating > 0 ? 2 : 0) +
+                (b.thumbnail ? 1 : 0) +
+                (b.isbn ? 1 : 0) +
+                (b.ratings_count > 0 ? 1 : 0) +
+                (b.shelves?.length > 0 ? 1 : 0),
+          }));
+          scored.sort((a, b) => b.metadataScore - a.metadataScore);
+
+          return {
+            normKey,
+            title: books[0].title,
+            author: books[0].author,
+            count: books.length,
+            recommended_keep: scored[0].id,
+            books: scored,
+          };
+        })
+        .sort((a, b) => b.count - a.count);
+
+    // Also flag ISBN-based duplicates that have different norm_keys
+    const isbnDuplicates = Object.entries(isbnGroups)
+        .filter(([, ids]) => ids.length > 1)
+        .map(([isbn, ids]) => {
+          const books = ids.map(id => allBooks.find(b => b.id === id)).filter(Boolean);
+          // Only include if they have DIFFERENT norm_keys (different title/author but same ISBN)
+          const uniqueKeys = new Set(books.map(b => b.norm_key));
+          if (uniqueKeys.size <= 1) return null; // Same norm_key = already caught above
+          return {
+            isbn,
+            count: books.length,
+            books: books.map(b => ({ id: b.id, title: b.title, author: b.author })),
+            type: 'isbn_match',
+          };
+        })
+        .filter(Boolean);
+
+    res.json({
+      success: true,
+      duplicates,
+      isbnDuplicates,
+      totalDuplicateGroups: duplicates.length + isbnDuplicates.length,
+      totalDuplicateBooks: duplicates.reduce((sum, d) => sum + d.count - 1, 0),
+    });
+  } catch (error) {
+    console.error('Error finding duplicates:', error);
+    res.status(500).json({ error: 'Failed to find duplicates' });
+  }
+});
+
+// POST /api/user-books/merge - Merge duplicate books
+app.post('/api/user-books/merge', async (req, res) => {
+  try {
+    const auth = await authenticateUser(req);
+    if (auth.error) return res.status(auth.status).json({ error: auth.error });
+
+    const { keepId, deleteIds } = req.body;
+
+    if (!keepId || !deleteIds || !Array.isArray(deleteIds) || deleteIds.length === 0) {
+      return res.status(400).json({ error: 'keepId and deleteIds array are required' });
+    }
+
+    // Verify all books belong to this user
+    const allIds = [keepId, ...deleteIds];
+    const { data: books, error: fetchError } = await supabase
+        .from('user_books')
+        .select('id')
+        .eq('user_id', auth.user.id)
+        .in('id', allIds);
+
+    if (fetchError) throw fetchError;
+    if (!books || books.length !== allIds.length) {
+      return res.status(403).json({ error: 'Some books not found or not owned by you' });
+    }
+
+    // Move shelf assignments from duplicates to the kept book
+    for (const deleteId of deleteIds) {
+      const { data: shelfAssignments } = await supabase
+          .from('book_shelves')
+          .select('shelf_id')
+          .eq('book_id', deleteId);
+
+      if (shelfAssignments && shelfAssignments.length > 0) {
+        const newAssignments = shelfAssignments.map(sa => ({
+          book_id: keepId,
+          shelf_id: sa.shelf_id,
+        }));
+
+        await supabase
+            .from('book_shelves')
+            .upsert(newAssignments, { onConflict: 'book_id,shelf_id', ignoreDuplicates: true });
+      }
+    }
+
+    // Delete the duplicate books
+    const { error: deleteError } = await supabase
+        .from('user_books')
+        .delete()
+        .in('id', deleteIds)
+        .eq('user_id', auth.user.id);
+
+    if (deleteError) throw deleteError;
+
+    console.log(`✅ Merged ${deleteIds.length} duplicates into ${keepId}`);
+
+    res.json({
+      success: true,
+      merged: deleteIds.length,
+      keptId: keepId,
+    });
+  } catch (error) {
+    console.error('Error merging books:', error);
+    res.status(500).json({ error: 'Failed to merge books' });
+  }
+});
+
+// POST /api/user-books/merge-all - Auto-merge all duplicates
+app.post('/api/user-books/merge-all', async (req, res) => {
+  try {
+    const auth = await authenticateUser(req);
+    if (auth.error) return res.status(auth.status).json({ error: auth.error });
+
+    // Get all books
+    const { data: allBooks, error } = await supabase
+        .from('user_books')
+        .select('id, title, author, isbn, rating, ratings_count, thumbnail, norm_key, created_at')
+        .eq('user_id', auth.user.id)
+        .order('created_at', { ascending: true });
+
+    if (error) throw error;
+
+    // Group by norm_key
+    const groups = {};
+    (allBooks || []).forEach(book => {
+      const key = book.norm_key;
+      if (!key) return;
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(book);
+    });
+
+    let totalMerged = 0;
+
+    for (const [, books] of Object.entries(groups)) {
+      if (books.length <= 1) continue;
+
+      // Score each book by metadata quality
+      const scored = books.map(b => ({
+        ...b,
+        score: (b.rating > 0 ? 2 : 0) +
+            (b.thumbnail ? 1 : 0) +
+            (b.isbn ? 1 : 0) +
+            (b.ratings_count > 0 ? 1 : 0),
+      }));
+      scored.sort((a, b) => b.score - a.score);
+
+      const keepId = scored[0].id;
+      const deleteIds = scored.slice(1).map(b => b.id);
+
+      // Move shelf assignments
+      for (const deleteId of deleteIds) {
+        const { data: shelfAssignments } = await supabase
+            .from('book_shelves')
+            .select('shelf_id')
+            .eq('book_id', deleteId);
+
+        if (shelfAssignments && shelfAssignments.length > 0) {
+          await supabase
+              .from('book_shelves')
+              .upsert(
+                  shelfAssignments.map(sa => ({ book_id: keepId, shelf_id: sa.shelf_id })),
+                  { onConflict: 'book_id,shelf_id', ignoreDuplicates: true }
+              );
+        }
+      }
+
+      // Delete duplicates
+      await supabase
+          .from('user_books')
+          .delete()
+          .in('id', deleteIds)
+          .eq('user_id', auth.user.id);
+
+      totalMerged += deleteIds.length;
+    }
+
+    console.log(`✅ Auto-merged ${totalMerged} duplicate books for user ${auth.user.id}`);
+
+    res.json({
+      success: true,
+      merged: totalMerged,
+      message: `Merged ${totalMerged} duplicate books`,
+    });
+  } catch (error) {
+    console.error('Error auto-merging:', error);
+    res.status(500).json({ error: 'Failed to auto-merge duplicates' });
   }
 });
 
