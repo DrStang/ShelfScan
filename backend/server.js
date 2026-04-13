@@ -538,7 +538,7 @@ function mergeBookData(googleBook, openLibBook, goodreadsRating, originalTitle, 
     } else {
       // ISBN-13 or unexpected format - use search with ISBN
       const searchQuery = encodeURIComponent(`${originalTitle} ${originalAuthor} ISBN ${cleanIsbn}`);
-      amazonUrl = `https://www.amazon.com/dp/${amazonIsbn}`;
+      amazonUrl = `https://www.amazon.com/s?k=${searchQuery}`;
       console.log(`Using search URL for ISBN: ${cleanIsbn}`);
     }
   } else {
