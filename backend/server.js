@@ -533,17 +533,20 @@ function mergeBookData(googleBook, openLibBook, goodreadsRating, originalTitle, 
 
     // Use direct product link if we have ISBN-10, otherwise use search
     if (amazonIsbn.length === 10) {
-      amazonUrl = `https://www.amazon.com/dp/${amazonIsbn}?tag=${AMAZON_AFFILIATE_TAG}`;
+      //amazonUrl = `https://www.amazon.com/dp/${amazonIsbn}?tag=${AMAZON_AFFILIATE_TAG}`;
+        amazonUrl = `https://www.amazon.com/dp/${amazonIsbn}`;
     } else {
       // ISBN-13 or unexpected format - use search with ISBN
       const searchQuery = encodeURIComponent(`${originalTitle} ${originalAuthor} ISBN ${cleanIsbn}`);
-      amazonUrl = `https://www.amazon.com/s?k=${searchQuery}&tag=${AMAZON_AFFILIATE_TAG}`;
+      amazonUrl = `https://www.amazon.com/dp/${amazonIsbn}`;
       console.log(`Using search URL for ISBN: ${cleanIsbn}`);
     }
   } else {
     // No ISBN available, create a search link
     const searchQuery = encodeURIComponent(`${originalTitle} ${originalAuthor}`);
-    amazonUrl = `https://www.amazon.com/s?k=${searchQuery}&tag=${AMAZON_AFFILIATE_TAG}`;
+    //amazonUrl = `https://www.amazon.com/s?k=${searchQuery}&tag=${AMAZON_AFFILIATE_TAG}`;
+    amazonUrl = `https://www.amazon.com/s?k=${searchQuery}`;
+
     console.log(`No ISBN - using title/author search for: ${originalTitle}`);
   }
   console.log(`📚 ${originalTitle}: Amazon URL = ${amazonUrl}`);
