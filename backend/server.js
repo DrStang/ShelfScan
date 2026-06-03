@@ -304,12 +304,17 @@ async function searchOpenLibrary(title, author) {
 async function searchGoogleBooks(title, author) {
   try {
     const query = encodeURIComponent(`${title} ${author}`);
+    const keyParam = process.env.GOOGLE_BOOKS_API_KEY
+          ? `&key=${process.env.GOOGLE_BOOKS_API_KEY}`
+          : '';  
     const response = await fetch(
-        `https://www.googleapis.com/books/v1/volumes?q=${query}&maxResults=1`
+        `https://www.googleapis.com/books/v1/volumes?q=${query}&maxResults=1&country=US${keyParam}`
     );
 
-    if (!response.ok) return null;
-
+    if (!response.ok) {
+      console.error(`Google Books ${response.status} for "${title}": rate-limited or quota exhausted`);
+      return null;
+    }
     const data = await response.json();
 
     if (data.items && data.items.length > 0) {
@@ -1216,8 +1221,12 @@ app.post('/api/scan-isbn', async (req, res) => {
 // Helper function to search Google Books by ISBN
 async function searchGoogleBooksByISBN(isbn) {
   try {
+      
+    const keyParam = process.env.GOOGLE_BOOKS_API_KEY
+        ? `&key=${process.env.GOOGLE_BOOKS_API_KEY}`
+        : '';
     const response = await fetch(
-        `https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}`
+        `https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}&country=US${keyParam}`
     );
 
     if (!response.ok) return null;
