@@ -516,7 +516,7 @@ function mergeBookData(googleBook, openLibBook, goodreadsRating, originalTitle, 
   const isbn = primary.isbn || secondary.isbn;
 
   // *** AMAZON AFFILIATE INTEGRATION ***
-  const AMAZON_AFFILIATE_TAG = process.env.AMAZON_AFFILIATE_TAG || 'shelfscan05-20';
+  const AMAZON_AFFILIATE_TAG = process.env.AMAZON_AFFILIATE_TAG || 'shelfscan0e5-20';
 
   // Create Amazon URL with affiliate tag
   let amazonUrl;
@@ -538,8 +538,8 @@ function mergeBookData(googleBook, openLibBook, goodreadsRating, originalTitle, 
 
     // Use direct product link if we have ISBN-10, otherwise use search
     if (amazonIsbn.length === 10) {
-      //amazonUrl = `https://www.amazon.com/dp/${amazonIsbn}?tag=${AMAZON_AFFILIATE_TAG}`;
-        amazonUrl = `https://www.amazon.com/dp/${amazonIsbn}`;
+      amazonUrl = `https://www.amazon.com/dp/${amazonIsbn}?tag=${AMAZON_AFFILIATE_TAG}`;
+    //amazonUrl = `https://www.amazon.com/dp/${amazonIsbn}`;
     } else {
       // ISBN-13 or unexpected format - use search with ISBN
       const searchQuery = encodeURIComponent(`${originalTitle} ${originalAuthor} ISBN ${cleanIsbn}`);
@@ -549,8 +549,8 @@ function mergeBookData(googleBook, openLibBook, goodreadsRating, originalTitle, 
   } else {
     // No ISBN available, create a search link
     const searchQuery = encodeURIComponent(`${originalTitle} ${originalAuthor}`);
-    //amazonUrl = `https://www.amazon.com/s?k=${searchQuery}&tag=${AMAZON_AFFILIATE_TAG}`;
-    amazonUrl = `https://www.amazon.com/s?k=${searchQuery}`;
+    amazonUrl = `https://www.amazon.com/s?k=${searchQuery}&tag=${AMAZON_AFFILIATE_TAG}`;
+    //amazonUrl = `https://www.amazon.com/s?k=${searchQuery}`;
 
     console.log(`No ISBN - using title/author search for: ${originalTitle}`);
   }
