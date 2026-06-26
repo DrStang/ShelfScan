@@ -305,8 +305,8 @@ async function searchGoogleBooks(title, author) {
   try {
     const query = encodeURIComponent(`${title} ${author}`);
     const keyParam = process.env.GOOGLE_BOOKS_API_KEY
-          ? `&key=${process.env.GOOGLE_BOOKS_API_KEY}`
-          : '';  
+        ? `&key=${process.env.GOOGLE_BOOKS_API_KEY}`
+        : '';
     const response = await fetch(
         `https://www.googleapis.com/books/v1/volumes?q=${query}&maxResults=1&country=US${keyParam}`
     );
@@ -539,7 +539,7 @@ function mergeBookData(googleBook, openLibBook, goodreadsRating, originalTitle, 
     // Use direct product link if we have ISBN-10, otherwise use search
     if (amazonIsbn.length === 10) {
       amazonUrl = `https://www.amazon.com/dp/${amazonIsbn}?tag=${AMAZON_AFFILIATE_TAG}`;
-    //amazonUrl = `https://www.amazon.com/dp/${amazonIsbn}`;
+      //amazonUrl = `https://www.amazon.com/dp/${amazonIsbn}`;
     } else {
       // ISBN-13 or unexpected format - use search with ISBN
       const searchQuery = encodeURIComponent(`${originalTitle} ${originalAuthor} ISBN ${cleanIsbn}`);
@@ -1221,7 +1221,7 @@ app.post('/api/scan-isbn', async (req, res) => {
 // Helper function to search Google Books by ISBN
 async function searchGoogleBooksByISBN(isbn) {
   try {
-      
+
     const keyParam = process.env.GOOGLE_BOOKS_API_KEY
         ? `&key=${process.env.GOOGLE_BOOKS_API_KEY}`
         : '';
@@ -1707,6 +1707,7 @@ app.post('/api/lookup-book', async (req, res) => {
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
+
 });
 
 // ============================================
@@ -2536,7 +2537,41 @@ app.post('/api/user-books/merge-all', async (req, res) => {
   }
 });
 
+// POST /api/user-books/extract-from-scan/:scanId
+// Adds a single scan's books into the user's collection (user_books)
+app.post('/api/user-books/extract-from-scan/:scanId', async (req, res) => {
+  try {
+    const auth = await authenticateUser(req);
+    if (auth.error) return res.status(auth.status).json({ error: auth.error });
 
+    const { scanId } = req.params;
+
+    // Fetch the scan and verify ownership
+    const { data: scan, error: scanError } = await supabase
+        .from('scans')
+        .select('id, user_id, books')
+        .eq('id', scanId)
+        .eq('user_id', auth.user.id)
+        .single();
+
+    if (scanError || !scan) {
+      return res.status(404).json({ error: 'Scan not found' });
+    }
+
+    const { inserted, skipped } = await extractBooksFromScan(
+        auth.user.id,
+        scan.id,
+        scan.books || []
+    );
+
+    console.log(`✅ extract-from-scan ${scanId}: inserted ${inserted}, skipped ${skipped}`);
+
+    res.json({ success: true, inserted, skipped });
+  } catch (error) {
+    console.error('Error extracting books from scan:', error);
+    res.status(500).json({ error: 'Failed to extract books from scan' });
+  }
+});
 
 // Error handling middleware
 app.use((err, req, res, next) => {
