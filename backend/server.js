@@ -307,7 +307,7 @@ async function searchGoogleBooks(title, author) {
     const keyParam = process.env.GOOGLE_BOOKS_API_KEY
         ? `&key=${process.env.GOOGLE_BOOKS_API_KEY}`
         : '';
-    const response = await fetch(
+    const response = await googleBooksFetch(
         `https://www.googleapis.com/books/v1/volumes?q=${query}&maxResults=1&country=US${keyParam}`
     );
 
@@ -352,6 +352,34 @@ async function searchGoogleBooks(title, author) {
     return null;
   }
 }
+
+async function googleBooksFetch(url, { retries = 3 } = {}) {
+    for (let attempt = 0; attempt <= retries; attempt++) {
+        const res = await fetch(url);
+        if (res.status !== 503 && res.status !== 429) return res; // success or non-retryable
+        if (attempt === retries) return res;                       // give up, hand back the 503
+
+        const retryAfter = Number(res.headers.get('retry-after')) * 1000;
+        const backoff = retryAfter || (2 ** attempt * 300 + Math.random() * 200);
+        console.warn(`⏳ Google Books ${res.status}, retry ${attempt + 1}/${retries} in ${Math.round(backoff)}ms`);
+        await new Promise(r => setTimeout(r, backoff));
+    }
+}
+function minimalBook(title, author) {
+  const tag = process.env.AMAZON_AFFILIATE_TAG || 'shelfscan0e5-20';
+  const q = encodeURIComponent(`${title} ${author}`);
+  return {
+    title, author,
+    rating: 0, ratingsCount: 0, ratingSource: 'No ratings available',
+    description: 'No description available',
+    thumbnail: null, infoLink: null, isbn: null, publishYear: null,
+    goodreadsUrl: `https://www.goodreads.com/search?q=${q}`,
+    amazonUrl: `https://www.amazon.com/s?k=${q}&tag=${tag}`,
+    sources: [],
+    unresolved: true, // optional: lets the frontend badge it / offer a re-lookup
+  };
+}
+
 async function getMariaConnection(retries = 3) {
   for (let i = 0; i < retries; i++) {
     try {
@@ -748,39 +776,57 @@ app.post('/api/scan', async (req, res) => {
 
     console.log(`Found ${extractedBooks.length} books, fetching ratings...`);
 
-    // Step 2: Get data from Google Books and Open Library (with caching)
-    const bookPromises = extractedBooks.map(async (book) => {
-      try {
-        const cacheKey = `book:${book.title.toLowerCase()}:${book.author.toLowerCase()}`;
-
-        const cached = await getFromCache(cacheKey);
-        if (cached) {
-          console.log(`✅ Cache hit: ${book.title}`);
-          return cached;
+    // Run an async mapper with at most `limit` tasks in flight
+    async function mapWithConcurrency(items, limit, mapper) {
+      const results = new Array(items.length);
+      let cursor = 0;
+      async function worker() {
+        while (cursor < items.length) {
+          const i = cursor++;
+          results[i] = await mapper(items[i], i);
         }
-
-        const [googleBook, openLibBook] = await Promise.all([
-          searchGoogleBooks(book.title, book.author),
-          searchOpenLibrary(book.title, book.author)
-        ]);
-        const isbn = googleBook?.isbn || openLibBook?.isbn;
-        const goodreadsRating = isbn ? await searchGoodreadsDB(isbn) : null;
-
-        const mergedData = mergeBookData(googleBook, openLibBook, goodreadsRating, book.title, book.author);
-
-        if (mergedData) {
-          await setCache(cacheKey, mergedData);
-          console.log(`✅ Fetched and cached: ${book.title}`);
-        }
-
-        return mergedData;
-      } catch (e) {
-        console.error(`Error fetching book info for "${book.title}":`, e.message);
-        return null;
       }
-    });
+      await Promise.all(
+        Array.from({ length: Math.min(limit, items.length) }, worker)
+      );
+      return results;
+    }  
 
-    const bookResults = await Promise.all(bookPromises);
+    // Step 2: Get data from Google Books and Open Library (with caching)
+const bookResults = await mapWithConcurrency(extractedBooks, 3, async (book) => {
+  try {
+    const cacheKey = `book:${book.title.toLowerCase()}:${book.author.toLowerCase()}`;
+    const cached = await getFromCache(cacheKey);
+    if (cached) {
+      console.log(`✅ Cache hit: ${book.title}`);
+      return cached;
+    }
+
+    const [googleBook, openLibBook] = await Promise.all([
+      searchGoogleBooks(book.title, book.author),
+      searchOpenLibrary(book.title, book.author)
+    ]);
+    const isbn = googleBook?.isbn || openLibBook?.isbn;
+    const goodreadsRating = isbn ? await searchGoodreadsDB(isbn) : null;
+
+    const mergedData = mergeBookData(googleBook, openLibBook, goodreadsRating, book.title, book.author);
+
+    if (mergedData) {
+      await setCache(cacheKey, mergedData);
+      console.log(`✅ Fetched and cached: ${book.title}`);
+      return mergedData;
+    }
+
+    // Nothing from any source — usually a transient Google 503 + Open Library miss.
+    // Return a minimal entry so the book still shows, but DON'T cache it,
+    // so a later scan can resolve it properly.
+    console.warn(`⚠️  No data for "${book.title}" — returning unresolved entry`);
+    return minimalBook(book.title, book.author);
+  } catch (e) {
+    console.error(`Error fetching book info for "${book.title}":`, e.message);
+    return minimalBook(book.title, book.author);
+  }
+});
     const validBooks = bookResults.filter(book => book !== null);
 
     if (validBooks.length === 0) {
@@ -1172,9 +1218,11 @@ app.post('/api/scan-isbn', async (req, res) => {
     }
 
     // Merge data from both sources
+    const goodreadsRating = await searchGoodreadsDB(cleanIsbn);
     const bookData = mergeBookData(
         googleBook,
         openLibBook,
+        goodreadsRating,
         googleBook?.title || openLibBook?.title || 'Unknown',
         googleBook?.author || openLibBook?.author || 'Unknown'
     );
@@ -1225,7 +1273,7 @@ async function searchGoogleBooksByISBN(isbn) {
     const keyParam = process.env.GOOGLE_BOOKS_API_KEY
         ? `&key=${process.env.GOOGLE_BOOKS_API_KEY}`
         : '';
-    const response = await fetch(
+    const response = await googleBooksFetch(
         `https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}&country=US${keyParam}`
     );
 
