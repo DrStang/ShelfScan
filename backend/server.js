@@ -211,6 +211,14 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+function googleBooksUrl(params) {
+    const qs = new URLSearchParams(params);
+    const proxy = process.env.GOOGLE_BOOKS_PROXY_URL;
+    if (proxy) return `${proxy}/gbooks/volumes?${qs}`;
+    if (process.env.GOOGLE_BOOKS_API_KEY) qs.set('key', process.env.GOOGLE_BOOKS_API_KEY);
+    return `https://www.googleapis.com/books/v1/volumes?${qs}`;
+}
+
 // Helper function to get from cache
 async function getFromCache(key) {
   if (!isRedisReady || !redisClient) {
@@ -303,12 +311,8 @@ async function searchOpenLibrary(title, author) {
 // Helper function to search Google Books
 async function searchGoogleBooks(title, author) {
   try {
-    const query = encodeURIComponent(`${title} ${author}`);
-    const keyParam = process.env.GOOGLE_BOOKS_API_KEY
-        ? `&key=${process.env.GOOGLE_BOOKS_API_KEY}`
-        : '';
     const response = await googleBooksFetch(
-        `https://www.googleapis.com/books/v1/volumes?q=${query}&maxResults=1&country=US${keyParam}`
+      googleBooksUrl({ q: `${title} ${author}`, maxResults: 1, country: 'US' })
     );
 
     if (!response.ok) {
@@ -355,7 +359,15 @@ async function searchGoogleBooks(title, author) {
 
 async function googleBooksFetch(url, { retries = 3 } = {}) {
     for (let attempt = 0; attempt <= retries; attempt++) {
-        const res = await fetch(url);
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'ShelfScan/1.0 (+https://shelfscan.xyz)',
+        ...(process.env.GOOGLE_BOOKS_PROXY_SECRET
+          ? { 'x-proxy-secret': process.env.GOOGLE_BOOKS_PROXY_SECRET }
+          : {})
+      }
+    });        
+        
         if (res.status !== 503 && res.status !== 429) return res; // success or non-retryable
         if (attempt === retries) return res;                       // give up, hand back the 503
 
@@ -1270,11 +1282,8 @@ app.post('/api/scan-isbn', async (req, res) => {
 async function searchGoogleBooksByISBN(isbn) {
   try {
 
-    const keyParam = process.env.GOOGLE_BOOKS_API_KEY
-        ? `&key=${process.env.GOOGLE_BOOKS_API_KEY}`
-        : '';
     const response = await googleBooksFetch(
-        `https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}&country=US${keyParam}`
+      googleBooksUrl({ q: `isbn:${isbn}`, country: 'US' })
     );
 
     if (!response.ok) return null;
