@@ -211,6 +211,24 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Google Books returns intermittent 503 "backendFailed" at high rates.
+// After repeated failures, skip it entirely for a cooldown so scans stay fast.
+const gbCircuit = { failures: 0, openUntil: 0, threshold: 5, cooldownMs: 10 * 60 * 1000 };
+
+function gbCircuitOpen() {
+  return Date.now() < gbCircuit.openUntil;
+}
+function gbSuccess() {
+  if (gbCircuit.failures > 0) console.log('✅ Google Books recovered');
+  gbCircuit.failures = 0;
+  gbCircuit.openUntil = 0;
+}
+function gbFailure() {
+  if (++gbCircuit.failures >= gbCircuit.threshold && !gbCircuitOpen()) {
+    gbCircuit.openUntil = Date.now() + gbCircuit.cooldownMs;
+    console.warn(`⛔ Google Books circuit open for ${gbCircuit.cooldownMs / 60000}min`);
+  }
+}
 
 // Helper function to get from cache
 async function getFromCache(key) {
@@ -243,67 +261,93 @@ async function setCache(key, value, expirySeconds = 2592000) {
 async function searchOpenLibrary(title, author) {
   try {
     const query = encodeURIComponent(`${title} ${author}`);
+    const fields = 'key,title,author_name,first_publish_year,cover_i,isbn,edition_count';
     const response = await fetch(
-        `https://openlibrary.org/search.json?q=${query}&limit=1`
+        `https://openlibrary.org/search.json?q=${query}&limit=5&fields=${fields}`,
+        { headers: { 'User-Agent': 'ShelfScan/1.0 (+https://shelfscan.xyz)' } }
     );
 
     if (!response.ok) return null;
-
     const data = await response.json();
+    if (!data.docs || data.docs.length === 0) return null;
 
-    if (data.docs && data.docs.length > 0) {
-      const book = data.docs[0];
+    // Pick the best match instead of blindly taking the first result
+    const norm = (s) => (s || '').toLowerCase().replace(/[^\w\s]/g, '').trim();
+    const wantTitle = norm(title);
+    const wantAuthor = norm(author);
 
-      // Open Library uses a rating system, try to get ratings
-      let rating = 0;
-      let ratingsCount = 0;
-
-      // Get work key to fetch ratings
-      if (book.key) {
-        try {
-          const workKey = book.key.replace('/works/', '');
-          const ratingsResponse = await fetch(
-              `https://openlibrary.org${book.key}/ratings.json`
-          );
-
-          if (ratingsResponse.ok) {
-            const ratingsData = await ratingsResponse.json();
-            if (ratingsData.summary && ratingsData.summary.average) {
-              rating = ratingsData.summary.average;
-              ratingsCount = ratingsData.summary.count || 0;
-            }
+    const book = data.docs
+        .map(doc => {
+          const dTitle = norm(doc.title);
+          const dAuthor = norm(doc.author_name?.[0]);
+          let score = 0;
+          if (dTitle === wantTitle) score += 4;
+          else if (dTitle.includes(wantTitle) || wantTitle.includes(dTitle)) score += 2;
+          if (wantAuthor && dAuthor) {
+            if (dAuthor === wantAuthor) score += 3;
+            else if (dAuthor.includes(wantAuthor) || wantAuthor.includes(dAuthor)) score += 2;
           }
-        } catch (e) {
-          console.log('Could not fetch Open Library ratings');
+          score += Math.min(doc.edition_count || 0, 20) / 20; // tiebreak toward common editions
+          return { doc, score };
+        })
+        .sort((a, b) => b.score - a.score)[0].doc;
+
+    // Fetch the work record for a real description + ratings, in parallel
+    let description = '';
+    let rating = 0;
+    let ratingsCount = 0;
+
+    if (book.key) {
+      const [workRes, ratingsRes] = await Promise.all([
+        fetch(`https://openlibrary.org${book.key}.json`).catch(() => null),
+        fetch(`https://openlibrary.org${book.key}/ratings.json`).catch(() => null)
+      ]);
+
+      if (workRes?.ok) {
+        const work = await workRes.json().catch(() => ({}));
+        // description is either a plain string or { type, value }
+        description = typeof work.description === 'string'
+            ? work.description
+            : (work.description?.value || '');
+      }
+
+      if (ratingsRes?.ok) {
+        const r = await ratingsRes.json().catch(() => ({}));
+        if (r.summary?.average) {
+          rating = r.summary.average;
+          ratingsCount = r.summary.count || 0;
         }
       }
-      let thumbnail = book.cover_i
-          ? `https://covers.openlibrary.org/b/id/${book.cover_i}-M.jpg`
-          : null;
-
-      return {
-        title: book.title || title,
-        author: book.author_name?.[0] || author,
-        rating: rating,
-        ratingsCount: ratingsCount,
-        description: book.first_sentence?.[0] || '',
-        thumbnail: thumbnail,
-        isbn: book.isbn?.[0] || null,
-        publishYear: book.first_publish_year || null,
-        source: 'openlibrary'
-      };
     }
 
-    return null;
+    // Collect ISBN candidates, preferring ISBN-13
+    const isbns = (book.isbn || []).map(i => i.replace(/[-\s]/g, ''));
+    const isbn13s = isbns.filter(i => i.length === 13);
+    const isbnCandidates = [...isbn13s, ...isbns.filter(i => i.length === 10)].slice(0, 12);
+
+    return {
+      title: book.title || title,
+      author: book.author_name?.[0] || author,
+      rating,
+      ratingsCount,
+      description,
+      thumbnail: book.cover_i
+          ? `https://covers.openlibrary.org/b/id/${book.cover_i}-L.jpg`
+          : null,
+      isbn: isbnCandidates[0] || null,
+      isbnCandidates,
+      publishYear: book.first_publish_year || null,
+      source: 'openlibrary'
+    };
   } catch (error) {
     console.error('Open Library API error:', error.message);
     return null;
   }
 }
-
 // Helper function to search Google Books
 async function searchGoogleBooks(title, author) {
   try {
+    if (gbCircuitOpen()) return null;
     const query = encodeURIComponent(`${title} ${author}`);
     const keyParam = process.env.GOOGLE_BOOKS_API_KEY ? `&key=${process.env.GOOGLE_BOOKS_API_KEY}`
         : '';
@@ -312,7 +356,7 @@ async function searchGoogleBooks(title, author) {
     );
 
     if (!response.ok) {
-      console.error(`Google Books ${response.status} for "${title}": rate-limited or quota exhausted`);
+      console.error(`Google Books ${response.status} for "${title}": Backend Failed`);
       return null;
     }
     const data = await response.json();
@@ -354,19 +398,34 @@ async function searchGoogleBooks(title, author) {
 }
 
 async function googleBooksFetch(url, { retries = 3 } = {}) {
-    for (let attempt = 0; attempt <= retries; attempt++) {
-    
-        const res = await fetch(url);       
-        
-        if (res.status !== 503 && res.status !== 429) return res; // success or non-retryable
-        if (attempt === retries) return res;                       // give up, hand back the 503
-
-        const retryAfter = Number(res.headers.get('retry-after')) * 1000;
-        const backoff = retryAfter || (2 ** attempt * 300 + Math.random() * 200);
-        console.warn(`⏳ Google Books ${res.status}, retry ${attempt + 1}/${retries} in ${Math.round(backoff)}ms`);
-        await new Promise(r => setTimeout(r, backoff));
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    let res;
+    try {
+      res = await fetch(url, {
+        headers: { 'User-Agent': 'ShelfScan/1.0 (+https://shelfscan.xyz)' }
+      });
+    } catch (err) {
+      if (attempt === retries) { gbFailure(); throw err; }
+      await new Promise(r => setTimeout(r, 400 * 2 ** attempt));
+      continue;
     }
+
+    if (res.status !== 503 && res.status !== 429) {
+      gbSuccess();
+      return res;
+    }
+    if (attempt === retries) {
+      gbFailure();
+      console.error(`❌ Google Books ${res.status} after ${attempt + 1} attempts`);
+      return res;
+    }
+
+    const retryAfter = Number(res.headers.get('retry-after')) * 1000;
+    const backoff = retryAfter || (400 * 2 ** attempt + Math.random() * 200);
+    await new Promise(r => setTimeout(r, backoff));
+  }
 }
+
 function minimalBook(title, author) {
   const tag = process.env.AMAZON_AFFILIATE_TAG || 'shelfscan0e5-20';
   const q = encodeURIComponent(`${title} ${author}`);
@@ -393,23 +452,27 @@ async function getMariaConnection(retries = 3) {
     }
   }
 }
-async function searchGoodreadsDB(isbn) {
-  if (!isbn) return null;
+async function searchGoodreadsDB(isbnOrList) {
+  const input = Array.isArray(isbnOrList) ? isbnOrList : [isbnOrList];
+  const cleaned = input.filter(Boolean).map(i => String(i).replace(/[-\s]/g, ''));
+  if (cleaned.length === 0) return null;
 
-  const cleanIsbn = isbn.replace(/[-\s]/g, '');
-  const isbnVariants = [cleanIsbn];
-
-  if (cleanIsbn.length === 13) {
-    const isbn10 = isbn13to10(cleanIsbn);
-    if (isbn10) isbnVariants.push(isbn10);
-  } else if (cleanIsbn.length === 10) {
-    const isbn13 = isbn10to13(cleanIsbn);
-    if (isbn13) isbnVariants.push(isbn13);
+  const expanded = [];
+  for (const isbn of cleaned) {
+    expanded.push(isbn);
+    if (isbn.length === 13) {
+      const t = isbn13to10(isbn);
+      if (t) expanded.push(t);
+    } else if (isbn.length === 10) {
+      const t = isbn10to13(isbn);
+      if (t) expanded.push(t);
+    }
   }
+  const variants = [...new Set(expanded)];
 
-// Check Redis cache first (populated by warm-cache.js)
+  // Check Redis cache first (populated by warm-cache.js)
   if (isRedisReady) {
-    for (const variant of isbnVariants) {
+    for (const variant of variants) {
       const cached = await getFromCache(`goodreads:${variant}`);
       if (cached) {
         console.log(`✅ Goodreads cache hit: ${variant}`);
@@ -427,26 +490,20 @@ async function searchGoodreadsDB(isbn) {
   try {
     conn = await getMariaConnection();
 
-    const query = 'SELECT star_rating, num_ratings FROM Scrape WHERE isbn IN (?) LIMIT 1';
-    const rows = await conn.query(query, [isbnVariants]);
+    const query = 'SELECT isbn, star_rating, num_ratings FROM Scrape WHERE isbn IN (?) LIMIT 1';
+    const rows = await conn.query(query, [variants]);
 
     if (rows.length > 0) {
       const row = rows[0];
+      const matchedIsbn = row.isbn || variants[0];
       const result = {
         rating: parseFloat(row.star_rating) || 0,
         ratingsCount: parseInt(row.num_ratings) || 0,
+        matchedIsbn,
         source: 'goodreads'
       };
 
-      if (isRedisReady) {
-        await setCache(`goodreads:${cleanIsbn}`, result, 86400 * 90);
-      }
-      console.log(`✅ Goodreads DB hit: ${cleanIsbn} - ${result.rating}★`);
-      return result;
-    }
-
-
-    {/* if (title && author) {
+      {/* if (title && author) {
       const query = 'SELECT star_rating, num_ratings FROM Scrape WHERE name = ? AND author =? LIMIT 1';
       let rows = await conn.query(query, [title, author]);
 
@@ -465,18 +522,25 @@ async function searchGoodreadsDB(isbn) {
         };
       }
     }*/}
-    console.log(`❌ No Goodreads match for: "${cleanIsbn}`);
-    return null;
+  
 
+      if (isRedisReady) {
+        await setCache(`goodreads:${matchedIsbn}`, result, 86400 * 90);
+      }
+      console.log(`✅ Goodreads DB hit: ${matchedIsbn} - ${result.rating}★`);
+      return result;
+    }
+
+    console.log(`❌ No Goodreads match for: ${variants.slice(0, 4).join(', ')}${variants.length > 4 ? '…' : ''}`);
+    return null;
   } catch (err) {
-    console.error("Error occurred with Goodreads Rating Retrieval:", err.message);
+    console.error('Error occurred with Goodreads Rating Retrieval:', err.message);
     return null;
   } finally {
-    if (conn) {
-      conn.release();
-    }
+    if (conn) conn.release();
   }
 }
+
 function isbn10to13(isbn10) {
   if (!isbn10 || isbn10.length !==10) return null;
   const base = '978' + isbn10.substring(0,9);
@@ -488,6 +552,22 @@ function isbn10to13(isbn10) {
   const checksum = (10 - (sum % 10)) % 10;
   return base + checksum.toString();
 }
+
+// Run an async mapper with at most `limit` tasks in flight
+async function mapWithConcurrency(items, limit, mapper) {
+    const results = new Array(items.length);
+    let cursor = 0;
+    async function worker() {
+        while (cursor < items.length) {
+          const i = cursor++;
+          results[i] = await mapper(items[i], i);
+        }
+      }
+      await Promise.all(
+        Array.from({ length: Math.min(limit, items.length) }, worker)
+      );
+      return results;
+}  
 
 
 
@@ -778,21 +858,6 @@ app.post('/api/scan', async (req, res) => {
 
     console.log(`Found ${extractedBooks.length} books, fetching ratings...`);
 
-    // Run an async mapper with at most `limit` tasks in flight
-    async function mapWithConcurrency(items, limit, mapper) {
-      const results = new Array(items.length);
-      let cursor = 0;
-      async function worker() {
-        while (cursor < items.length) {
-          const i = cursor++;
-          results[i] = await mapper(items[i], i);
-        }
-      }
-      await Promise.all(
-        Array.from({ length: Math.min(limit, items.length) }, worker)
-      );
-      return results;
-    }  
 
     // Step 2: Get data from Google Books and Open Library (with caching)
 const bookResults = await mapWithConcurrency(extractedBooks, 3, async (book) => {
@@ -808,8 +873,12 @@ const bookResults = await mapWithConcurrency(extractedBooks, 3, async (book) => 
       searchGoogleBooks(book.title, book.author),
       searchOpenLibrary(book.title, book.author)
     ]);
-    const isbn = googleBook?.isbn || openLibBook?.isbn;
-    const goodreadsRating = isbn ? await searchGoodreadsDB(isbn) : null;
+    const isbnCandidates = [
+      googleBook?.isbn,
+      ...(openLibBook?.isbnCandidates || []),
+      openLibBook?.isbn
+    ].filter(Boolean);
+    const goodreadsRating = isbnCandidates.length ? await searchGoodreadsDB(isbnCandidates) : null;
 
     const mergedData = mergeBookData(googleBook, openLibBook, goodreadsRating, book.title, book.author);
 
@@ -1695,7 +1764,13 @@ app.post('/api/lookup-book', async (req, res) => {
       searchGoogleBooks(searchTitle, searchAuthor),
       searchOpenLibrary(searchTitle, searchAuthor)
     ]);
-    const goodreadsRating = searchIsbn ? await searchGoodreadsDB(searchIsbn) : null;
+    const isbnCandidates = [
+      searchIsbn,
+      googleBook?.isbn,
+      ...(openLibBook?.isbnCandidates || []),
+      openLibBook?.isbn
+    ].filter(Boolean);
+    const goodreadsRating = isbnCandidates.length ? await searchGoodreadsDB(isbnCandidates) : null;
 
     const mergedData = mergeBookData(googleBook, openLibBook, goodreadsRating, searchTitle, searchAuthor);
 
