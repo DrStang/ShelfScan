@@ -741,6 +741,18 @@ function checkReadingList(book, readingList) {
 
   return null;
 }
+
+let lastAlert = 0;
+async function alertOwner(msg) {
+    if (Date.now() - lastAlert < 15 * 60 * 1000) return;
+    lastAlert = Date.now();
+    fetch(process.env.ALERT_WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: `🚨 ShelfScan: ${msg}` }) // Discord format
+    }).catch(() => {});
+}
+
 app.get('/api/debug-db', async (req, res) => {
   try {
     const conn = await mariadb.createConnection({
@@ -833,6 +845,11 @@ app.post('/api/scan', async (req, res) => {
 
     if (!openaiResponse.ok) {
       const errorData = await openaiResponse.json().catch(() => ({}));
+      const code = errorData.error?.code;
+      if (['insufficient_quota', 'invalid_api_key', 'billing_hard_limit_reached'].includes(code)
+          || openaiResponse.status === 401 || openaiResponse.status === 429) {
+        alertOwner(`OpenAI ${openaiResponse.status}: ${errorData.error?.message}`);
+      }  
       console.error('OpenAI API error:', errorData);
       return res.status(500).json({
         error: 'Failed to analyze image',
