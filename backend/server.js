@@ -2204,39 +2204,34 @@ app.get('/api/user-books', async (req, res) => {
 
     const { shelfId, search, minRating, maxRating, sort, limit, offset, hasImage, unshelfed } = req.query;
 
-    let query = supabase
-        .from('user_books')
-        .select(`
+    // Filters are applied via joins (not ID lists) so the request URL stays
+    // small regardless of library size. See: UND_ERR_HEADERS_OVERFLOW, 2026-10-21.
+    // shelf_filter is a second, aliased embed used only for filtering so the
+    // main book_shelves embed still returns ALL shelves for each book.
+    const selectCols = shelfId
+        ? `
+        *,
+        book_shelves(shelf_id, shelves(id, name, color, icon)),
+        shelf_filter:book_shelves!inner(shelf_id)
+      `
+        : `
         *,
         book_shelves(shelf_id, shelves(id, name, color, icon))
-      `, { count: 'exact' })
+      `;
+
+    let query = supabase
+        .from('user_books')
+        .select(selectCols, { count: 'exact' })
         .eq('user_id', auth.user.id);
 
-    // Filter by shelf
+    // Filter by shelf (inner join on the aliased embed)
     if (shelfId) {
-      const { data: shelfBooks } = await supabase
-          .from('book_shelves')
-          .select('book_id')
-          .eq('shelf_id', shelfId);
-
-      if (shelfBooks && shelfBooks.length > 0) {
-        query = query.in('id', shelfBooks.map(sb => sb.book_id));
-      } else {
-        return res.json({ success: true, books: [], total: 0 });
-      }
+      query = query.eq('shelf_filter.shelf_id', shelfId);
     }
 
-    // Filter for unshelved books (not on any shelf)
+    // Filter for unshelved books (anti-join: no book_shelves rows)
     if (unshelfed === 'true') {
-      // Get all book IDs that ARE on a shelf
-      const { data: shelvedBooks } = await supabase
-          .from('book_shelves')
-          .select('book_id');
-
-      if (shelvedBooks && shelvedBooks.length > 0) {
-        const shelvedIds = shelvedBooks.map(sb => sb.book_id);
-        query = query.not('id', 'in', `(${shelvedIds.join(',')})`);
-      }
+      query = query.is('book_shelves', null);
     }
 
     // Full-text search (uses the search_vector column)
@@ -2302,16 +2297,21 @@ app.get('/api/user-books', async (req, res) => {
 
     if (error) throw error;
 
-    // Flatten shelf data
+    // Flatten shelf data (and drop the filter-only embed)
     const result = (books || []).map(book => ({
       ...book,
       shelves: (book.book_shelves || []).map(bs => bs.shelves).filter(Boolean),
       book_shelves: undefined,
+      shelf_filter: undefined,
     }));
 
     res.json({ success: true, books: result, total: count || 0 });
   } catch (error) {
-    console.error('Error fetching user books:', error);
+    console.error('Error fetching user books:', {
+      error,
+      query: req.query,
+      userId: req.headers.authorization ? '[present]' : '[missing]',
+    });
     res.status(500).json({ error: 'Failed to fetch books' });
   }
 });
